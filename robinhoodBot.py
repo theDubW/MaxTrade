@@ -1,5 +1,6 @@
 import robin_stocks as r
 import keyring as k
+import pandas as pd
 
 def getUserInfo():
     username = k.get_password("MaxTradeBot", "BotUserName")
@@ -29,16 +30,18 @@ def getStockHoldings():
     stock_positions = r.account.build_holdings()
     positions = {}
     for stock in stock_positions:
-        positions[stock] = {"quantity":stock_positions[stock]['quantity'], "equity":stock_positions[stock]['equity'], "percent_change":stock_positions[stock]['percent_change']}
-    return positions
+        positions[stock] = {"Quantity":float(stock_positions[stock]['quantity']), "Equity":float(stock_positions[stock]['equity']), "Percent Change":float(stock_positions[stock]['percent_change'])}
+    pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Quantity","Equity","Percent Change"])
+    return pos_to_pd
 def getOptionPositions():
     option_positions =  r.options.get_open_option_positions()
     positions = {}
     for option in option_positions:
         info = getOptionInfo(option)
         instr = getInstrData(option)
-        positions[option['chain_symbol']] = {"strike_price":instr['strike_price'], "type":option['type']+" "+instr['type'],"exp_date":instr['expiration_date'],"quantity":option['quantity'],"percent_change":percentChange(option, info)}
-    return positions
+        positions[option['chain_symbol']] = {"Strike Price":instr['strike_price'], "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":option['quantity'],"Market Price":info['mark_price'],"Percent Change":percentChange(option, info)}
+    pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Strike Price","Type","Expiration Date","Quantity","Market Price", "Percent Change"])
+    return pos_to_pd
 
 # stock_positions = r.account.build_holdings()
 # option_positions =  r.options.get_open_option_positions()
