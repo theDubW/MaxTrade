@@ -1,6 +1,6 @@
 from PySide2.QtCore import QUrl, Qt
 from PySide2.QtGui import QIcon, QKeySequence, QPixmap
-from PySide2.QtWidgets import QMainWindow, QAction
+from PySide2.QtWidgets import QMainWindow, QAction, QLabel
 
 import rc_images
 
@@ -10,6 +10,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("MaxTrade")
         self.setWindowIcon(QIcon(QPixmap(":/Icons/logo.png")))
         self.setWindowState(Qt.WindowMaximized)
+        # self.addDockWidget(Qt.TopRightSection, stock_info)
         self.setCentralWidget(stock_info)
 
         self.menu = self.menuBar()

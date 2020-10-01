@@ -36,22 +36,22 @@ if __name__ == '__main__':
         app.setStyleSheet(_style)
     sys.exit(app.exec_())
 
-# @Slot()
-# def confirmLossGain():
-#     print("")
+@Slot()
+def confirmLossGain():
+    print("")
 
 
 
-#button e.g.
-# app = QApplication(sys.argv)
-# execute_bot = QPushButton("Set stop loss and gain")
-# execute_bot.clicked.connect(setLossGain)
-# execute_bot.show()
+button e.g.
+app = QApplication(sys.argv)
+execute_bot = QPushButton("Set stop loss and gain")
+execute_bot.clicked.connect(setLossGain)
+execute_bot.show()
 
-#QML E.G.
-# view = QQuickView()
-# url = QUrl("bot.qml")
-# view.setSource(url)
-# view.setResizeMode(QQuickView.SizeRootObjectToView)
-# view.show()
-# app.exec_()
+QML E.G.
+view = QQuickView()
+url = QUrl("bot.qml")
+view.setSource(url)
+view.setResizeMode(QQuickView.SizeRootObjectToView)
+view.show()
+app.exec_()

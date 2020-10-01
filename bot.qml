@@ -1,12 +1,6 @@
 import QtQuick 2.0
 
-Rectangle {
-    width: 200
-    height: 200
-    color: "green"
-
-    Text {
-        text: "MaxTrade"
-        anchors.centerIn: parent
-    }
+Text {
+    font.pointSize = 30;
+    fontInfo.bold = true
 }
