@@ -1,7 +1,7 @@
 from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal
-from PySide2.QtGui import QColor, QFont
+from PySide2.QtGui import QColor, QFont, QDoubleValidator
 from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QHeaderView, QSizePolicy,
-                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton)
+                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea)
 
 import robinhoodBot as r
 class StockPositionsTable(QAbstractTableModel):
@@ -91,12 +91,24 @@ class PositionSet(QDialog):
         layout.addWidget(self.take_profit)
         layout.addWidget(self.confirm)
         self.setLayout(layout)
-
-        self.confirm.clicked.connect(self.confirmLossGain)
+        # self.confirm.clicked.connect(self.confirmLossGain)
     def confirmLossGain(self):
         print("Stop Loss: {}\nTake Profit: {}".format(self.stop_loss.text(), self.take_profit.text()))
-    
-        
+
+class OutputBox(QScrollArea):
+    def __init__(self):
+        QScrollArea.__init__(self)
+        self.setWidgetResizable(True)
+        content = QWidget(self)
+        self.setWidget(content)
+        layout = QVBoxLayout(content)
+        self.label = QLabel(content)
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.label.setWordWrap(True)
+        self.setStyleSheet("QWidget{background-color:white};")
+        layout.addWidget(self.label)
+    def setText(self, text):
+        self.label.setText(text)
 class StockPositions(QWidget):
     def __init__(self):
         QWidget.__init__(self)
@@ -133,22 +145,52 @@ class StockPositions(QWidget):
         self.table_label.adjustSize()
 
         #Add Stop Loss Form
-        self.form = PositionSet()
+        # self.position_number = QLineEdit("Position Number")
+        self.position_editing = QListWidget()
+        self.position_editing.setGeometry(50, 70, 100, 75)
+        for i in self.positions.tickers:
+            self.position_editing.addItem(QListWidgetItem(i))
+        # self.position_editing.adjustSize()
+        self.position_editing.setResizeMode(QListView.Fixed)
+        self.confirm = QPushButton("Confirm") 
 
-        #Add Output Box
-        self.output_box = QLabel("Output")
-        self.output_box.setMinimumSize(200, 200)
-        self.output_box.setMaximumSize(200, 200)
-        self.output_box.setStyleSheet("QLabel{background-color:white}; border: 1px solid black;")
-        self.output_box.setAlignment(Qt.AlignTop)
+        #Stop Loss/Take Profit + Validator to float
+        validator = QDoubleValidator()
+        validator.setBottom(-100)
+        validator.setDecimals(2)
+        validator.setNotation(QDoubleValidator.StandardNotation)
+        self.stop_loss = QLineEdit()
+        self.stop_loss.setPlaceholderText("Stop Loss %")
+        self.take_profit = QLineEdit()
+        self.take_profit.setPlaceholderText("Take Profit %")
+        self.stop_loss.setValidator(validator)
+        self.take_profit.setValidator(validator)
         
+
+        self.form_widget = QWidget()
+        self.form_layout = QVBoxLayout()
+        self.form_layout.addWidget(self.position_editing)
+        self.form_layout.addWidget(self.stop_loss)
+        self.form_layout.addWidget(self.take_profit)
+        self.form_layout.addWidget(self.confirm)
+        self.confirm.clicked.connect(self.updateOutput)
+        self.form_widget.setLayout(self.form_layout)
+        
+        #Add Output Box
+        self.output_text = "Output\n\n"
+        self.output_box = OutputBox()
+        self.output_box.setText(self.output_text)
+        self.output_box.setWidgetResizable(True)
+        self.output_box.setFixedSize(200, 100)
+        # self.output_box.setGeometry(300, 100, 300, 100)
+
         self.main_layout.addWidget(self.table_label,1,0,1,0, Qt.AlignTrailing)
         self.main_layout.addWidget(self.table_view,2,0,1,0,Qt.AlignTrailing)
-        self.main_layout.addWidget(self.form,3,0,1,0,Qt.AlignTrailing)
+        self.main_layout.addWidget(self.form_widget,3,0,1,0,Qt.AlignTrailing)
         self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
         self.main_layout.setAlignment(Qt.AlignLeft)
         self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
-        self.main_layout.setAlignment(self.form, Qt.AlignCenter)
+        self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
         self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
         #main layout
         self.setLayout(self.main_layout)
@@ -159,3 +201,6 @@ class StockPositions(QWidget):
         return None
     def startTimer(self):
         self.timer.start(10000)
+    def updateOutput(self):
+        self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
+        self.output_box.setText(self.output_text)
