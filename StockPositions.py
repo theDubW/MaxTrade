@@ -177,7 +177,7 @@ class StockPositions(QWidget):
         self.form_widget.setLayout(self.form_layout)
         
         #Add Output Box
-        self.output_text = "Output\n\n"
+        self.output_text = "Bot Output:\n\n"
         self.output_box = OutputBox()
         self.output_box.setText(self.output_text)
         self.output_box.setWidgetResizable(True)
@@ -202,5 +202,6 @@ class StockPositions(QWidget):
     def startTimer(self):
         self.timer.start(10000)
     def updateOutput(self):
-        self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
+        self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
+        # r.sellStockPosition(self.position_editing.currentItem().text(),self.stop_loss.text())
         self.output_box.setText(self.output_text)
