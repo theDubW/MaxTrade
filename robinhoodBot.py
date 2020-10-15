@@ -58,7 +58,7 @@ def sellStockPosition(ticker, quantity, stop_loss, take_profit):
     # Setting Stop Loss
     stopPrice = round(float(getStockPosition(ticker)['average_buy_price'])*(1-stop_loss/100.0),1)
     # r.orders.order(ticker,quantity,"limit",trigger="stop",side="sell",priceType=None,limitPrice=stopPrice,stopPrice=stopPrice,timeInForce="gtc",extendedHours=False)
-    order = {'take_profit':round(float(getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice}
+    order = {'take_profit':round(float(getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, 'quantity':quantity}
     infile = open("Sell_Positions", 'rb')
     curr_orders = pickle.load(infile)
     infile.close()
@@ -66,6 +66,12 @@ def sellStockPosition(ticker, quantity, stop_loss, take_profit):
     outfile = open("Sell_Positions",'wb')
     pickle.dump(curr_orders, outfile)
     outfile.close()
+#Cancels all stock orders for a given ticker
+def cancelAllOrders(ticker):
+    currOrders = r.get_all_open_stock_orders()
+    for order in currOrders:
+        if(r.stocks.get_instrument_by_url(order['instrument'],"symbol")==ticker):
+            r.orders.cancel_stock_order(order['id'])
 def getCurrOrders():
     infile = open("Sell_Positions", 'rb')
     curr_orders = pickle.load(infile)
@@ -74,6 +80,16 @@ def getCurrOrders():
 def updateHoldings():
     global stock_positions
     stock_positions = r.account.build_holdings()
+def update():
+    updateHoldings()
+    orders = getCurrOrders()
+    for order in orders:
+        if float(getStockPosition(order)['price']) >= orders[order]['take_profit']:
+            print("Canceling")
+            cancelAllOrders(order)
+            print("Selling")
+            r.orders.order(order, orders[order]['quantity'],"limit",trigger="immediate",side="sell",priceType=None,limitPrice=orders[order]['take_profit'],stopPrice=None,timeInForce="gtc",extendedHours=False)
+
 
 
 # stock_positions = r.account.build_holdings()
