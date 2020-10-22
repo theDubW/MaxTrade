@@ -3,95 +3,140 @@ import keyring as k
 import pandas as pd
 import pickle
 
+from PySide2.QtCore import Signal, QObject
 
-stock_positions = {}
-empty_dic = {}
-temp_outfile = open("Sell_Positions","wb")
-pickle.dump(empty_dic, temp_outfile)
-temp_outfile.close()
-def getUserInfo():
-    username = k.get_password("MaxTradeBot", "BotUserName")
-    return {"username":username, "password":k.get_password("MaxTrade", username)}
-def percentChange(option, info):
-    return round((float(info['mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
-def getOptionInfo(option):
-    inst = option['option']
-    inst=inst[:len(inst)-1]
-    inst = inst[str.rfind(inst, '/'):]
-    return r.options.get_option_market_data_by_id(inst)
-def getInstrData(option):
-    inst = option['option']
-    inst=inst[:len(inst)-1]
-    inst = inst[str.rfind(inst, '/'):]
-    inst = inst[1:]
-    return r.options.get_option_instrument_data_by_id(inst)
-def login():
-    if(k.get_password("MaxTradeBot", "BotUserName") == None):
-        username = input("Robinhood Email/Username:")
-        password = input("Robinhood Password:")
+class Robinhood(QObject):
+    sold_stock_signal = Signal()
+    def __init__(self):
+        super(Robinhood, self).__init__()
+        self.stock_positions = {}
+        empty_dic = {}
+        temp_outfile = open("Sell_Positions","wb")
+        pickle.dump(empty_dic, temp_outfile)
+        temp_outfile.close()
+        # self.sold_stock_signal.connect(self.signalReceived)
+    def percentChange(self, option, info):
+        return round((float(info['mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
+    def getOptionInfo(self, option):
+        inst = option['option']
+        inst=inst[:len(inst)-1]
+        inst = inst[str.rfind(inst, '/'):]
+        return r.options.get_option_market_data_by_id(inst)
+    def getInstrData(self, option):
+        inst = option['option']
+        inst=inst[:len(inst)-1]
+        inst = inst[str.rfind(inst, '/'):]
+        inst = inst[1:]
+        return r.options.get_option_instrument_data_by_id(inst)
+    def getUserInfo(self):
+        username = k.get_password("MaxTradeBot", "BotUserName")
+        return {"username":username, "password":k.get_password("MaxTrade", username)}
+    #Sets stored username and password based on input
+    def setUsernamePW(self, username, password):
         k.set_password("MaxTradeBot", "BotUserName", username)
         k.set_password("MaxTrade", k.get_password("MaxTradeBot", "BotUserName"), password)
-        a = r.authentication.login(username=getUserInfo()["username"],password=getUserInfo()["password"],by_sms=False, store_session = True)
-    else:
-        print("Username stored:{}, Password Stored:{}".format(getUserInfo()["username"], getUserInfo()["password"]))
-        a = r.authentication.login(username=getUserInfo()["username"],password=getUserInfo()["password"],by_sms=False, store_session = True)
-        print(a)
-def getStockHoldings():
-    positions = {}
-    for stock in stock_positions:
-        positions[stock] = {"Quantity":float(stock_positions[stock]['quantity']), "Equity":float(stock_positions[stock]['equity']), "Percent Change":float(stock_positions[stock]['percent_change'])}
-    pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Quantity","Equity","Percent Change"])
-    return pos_to_pd
-def getStockPosition(ticker):
-    global stock_positions
-    return stock_positions[ticker]
-def getOptionPositions():
-    option_positions =  r.options.get_open_option_positions()
-    positions = {}
-    for option in option_positions:
-        info = getOptionInfo(option)
-        instr = getInstrData(option)
-        positions[option['chain_symbol']] = {"Strike Price":instr['strike_price'], "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":option['quantity'],"Market Price":info['mark_price'],"Percent Change":percentChange(option, info)}
-    pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Strike Price","Type","Expiration Date","Quantity","Market Price", "Percent Change"])
-    return pos_to_pd
-def sellStockPosition(ticker, quantity, stop_loss, take_profit):
-    # Setting Stop Loss
-    stopPrice = round(float(getStockPosition(ticker)['average_buy_price'])*(1-stop_loss/100.0),1)
-    # r.orders.order(ticker,quantity,"limit",trigger="stop",side="sell",priceType=None,limitPrice=stopPrice,stopPrice=stopPrice,timeInForce="gtc",extendedHours=False)
-    order = {'take_profit':round(float(getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, 'quantity':quantity}
-    infile = open("Sell_Positions", 'rb')
-    curr_orders = pickle.load(infile)
-    infile.close()
-    curr_orders[ticker] = order
-    outfile = open("Sell_Positions",'wb')
-    pickle.dump(curr_orders, outfile)
-    outfile.close()
-#Cancels all stock orders for a given ticker
-def cancelAllOrders(ticker):
-    currOrders = r.get_all_open_stock_orders()
-    for order in currOrders:
-        if(r.stocks.get_instrument_by_url(order['instrument'],"symbol")==ticker):
-            r.orders.cancel_stock_order(order['id'])
-def getCurrOrders():
-    infile = open("Sell_Positions", 'rb')
-    curr_orders = pickle.load(infile)
-    infile.close()
-    return curr_orders
-def updateHoldings():
-    global stock_positions
-    stock_positions = r.account.build_holdings()
-def update():
-    updateHoldings()
-    orders = getCurrOrders()
-    for order in orders:
-        if float(getStockPosition(order)['price']) >= orders[order]['take_profit']:
-            print("Canceling")
-            cancelAllOrders(order)
-            print("Selling")
-            r.orders.order(order, orders[order]['quantity'],"limit",trigger="immediate",side="sell",priceType=None,limitPrice=orders[order]['take_profit'],stopPrice=None,timeInForce="gtc",extendedHours=False)
+    def login(self):
+        if(k.get_password("MaxTradeBot", "BotUserName") == None):
+            # username = input("Robinhood Email/Username:")
+            # password = input("Robinhood Password:")
+            # a = r.authentication.login(username=getUserInfo()["username"],password=getUserInfo()["password"],by_sms=False, store_session = True)
+            return False
+        else:
+            print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
+            a = r.authentication.login(username=self.getUserInfo()["username"],password=self.getUserInfo()["password"], store_session = True)
+            return a
+    def getStockHoldings(self):
+        positions = {}
+        for stock in self.stock_positions:
+            positions[stock] = {"Quantity":float(self.stock_positions[stock]['quantity']), "Equity":float(self.stock_positions[stock]['equity']), "Percent Change":float(self.stock_positions[stock]['percent_change'])}
+        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Quantity","Equity","Percent Change"])
+        return pos_to_pd
+    def getStockPosition(self, ticker):
+        return self.stock_positions[ticker]
+    def getOptionPositions(self):
+        option_positions =  r.options.get_open_option_positions()
+        positions = {}
+        for option in option_positions:
+            info = self.getOptionInfo(option)
+            instr = self.getInstrData(option)
+            positions[option['chain_symbol']] = {"Strike Price":instr['strike_price'], "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":option['quantity'],"Market Price":info['mark_price'],"Percent Change":percentChange(option, info)}
+        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Strike Price","Type","Expiration Date","Quantity","Market Price", "Percent Change"])
+        return pos_to_pd
+    def sellStockPosition(self, ticker, quantity, stop_loss, take_profit):
+        # Setting Stop Loss
+        stopPrice = round(float(self.getStockPosition(ticker)['average_buy_price'])*(1+stop_loss/100.0),1)
+        #out_order = r.orders.order(ticker,quantity,"limit",trigger="stop",side="sell",priceType=None,limitPrice=stopPrice,stopPrice=stopPrice,timeInForce="gtc",extendedHours=False)
+        out_order = {'id':'SAMPLE_SELL_ID'}
+        order = {'take_profit':round(float(self.getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, 'quantity':quantity, "stop_id":out_order['id']}
+        infile = open("Sell_Positions", 'rb')
+        curr_orders = pickle.load(infile)
+        infile.close()
+        curr_orders[ticker] = order
+        outfile = open("Sell_Positions",'wb')
+        pickle.dump(curr_orders, outfile)
+        outfile.close()
+    #Cancels all stock orders for a given ticker
+    def cancelAllOrders(self, ticker):
+        currOrders = r.get_all_open_stock_orders()
+        for order in currOrders:
+            if(r.stocks.get_instrument_by_url(order['instrument'],"symbol")==ticker):
+                r.orders.cancel_stock_order(order['id'])
+    #Check if sell has been executed
+    def checkSold(self, orderId):
+        pastOrders = r.get_all_stock_orders('id')
+        # pastOrders.append("SAMPLE_SELL_ID")
+        pastOrders.append("SAMPLE_TAKE_PROFIT_ID")
+        if(orderId in pastOrders):
+            return True
+        return False
+    # def soldPosition(orders, ticker):
+    #     sig = Signal()
+    #     sig.emit()
+    def signalReceived(self):
+        print("SIGNAL RECIEVED SELL")
 
-
-
+    #Deletes order from pickle file
+    def deleteOrder(self, ticker):
+        infile = open("Sell_Positions", 'rb')
+        curr_orders = pickle.load(infile)
+        curr_orders.pop(ticker)
+        infile.close()
+        outfile = open("Sell_Positions",'wb')
+        pickle.dump(curr_orders, outfile)
+        outfile.close()
+    #Return current orders dictionary
+    def getCurrOrders(self):
+        infile = open("Sell_Positions", 'rb')
+        curr_orders = pickle.load(infile)
+        infile.close()
+        return curr_orders
+    def updateHoldings(self):
+        self.stock_positions = r.account.build_holdings()
+    def update(self):
+        self.updateHoldings()
+        orders = self.getCurrOrders()
+        for order in orders:
+            if("stop_id" in orders[order] and self.checkSold(orders[order]['stop_id'])):
+                print("SOLD {} POSITION FOR {} LOSS".format(order, orders[order]['stop_loss']))
+                self.sold_stock_signal.emit()
+                self.deleteOrder(order)
+            elif("take_profit_id" in orders[order] and self.checkSold(orders[order]['take_profit_id'])):
+                print("SOLD {} POSITION FOR {} PROFIT".format(order, orders[order]['take_profit']))
+                self.sold_stock_signal.emit()
+                self.deleteOrder(order)
+            elif float(self.getStockPosition(order)['price']) >= orders[order]['take_profit']:
+                print("Canceling")
+                self.cancelAllOrders(order)
+                print("Selling")
+                #out_order = r.orders.order(order, orders[order]['quantity'],"market",trigger="immediate",side="sell",priceType=None,limitPrice=None,stopPrice=None,timeInForce="gtc",extendedHours=False)
+                out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
+                infile = open("Sell_Positions", 'rb')
+                curr_orders = pickle.load(infile)
+                infile.close()
+                curr_orders[order]['take_profit_id'] = out_order['id'] 
+                outfile = open("Sell_Positions",'wb')
+                pickle.dump(curr_orders, outfile)
+                outfile.close()
 # stock_positions = r.account.build_holdings()
 # option_positions =  r.options.get_open_option_positions()
 

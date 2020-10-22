@@ -8,7 +8,6 @@ class StockPositionsTable(QAbstractTableModel):
     def __init__(self, positions=None):
         QAbstractTableModel.__init__(self)
         self.load_data(positions)
-        # self.data_changed.connect(self.view.refresh)
     def load_data(self, data):
         self.tickers = data.index
         self.quantity = data['Quantity']
@@ -112,8 +111,9 @@ class OutputBox(QScrollArea):
 class StockPositions(QWidget):
     def __init__(self):
         QWidget.__init__(self)
-
-        self.positions = StockPositionsTable(r.getStockHoldings())
+        self.robinhood = r.Robinhood()
+        self.robinhood.updateHoldings()
+        self.positions = StockPositionsTable(self.robinhood.getStockHoldings())
         self.table_view = QTableView()
 
         #Timer
@@ -175,6 +175,9 @@ class StockPositions(QWidget):
         self.form_layout.addWidget(self.confirm)
         self.confirm.clicked.connect(self.updateOutput)
         self.form_widget.setLayout(self.form_layout)
+
+        #Add Slot connection to sold signal
+        self.robinhood.sold_stock_signal.connect(self.soldPosition)
         
         #Add Output Box
         self.output_text = "Bot Output:\n\n"
@@ -195,13 +198,17 @@ class StockPositions(QWidget):
         #main layout
         self.setLayout(self.main_layout)
     def updateData(self):
-        self.positions.load_data(r.getStockHoldings())
+        self.robinhood.update()
+        self.positions.load_data(self.robinhood.getStockHoldings())
         self.positions.updateTable()
         # print("Updated Data")
         return None
     def startTimer(self):
         self.timer.start(10000)
+    def soldPosition(self):
+        self.output_text += ("SOLD POSITION")
+        self.output_box.setText(self.output_text)
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
-        # r.sellStockPosition(self.position_editing.currentItem().text(),self.stop_loss.text())
+        self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 0, float(self.stop_loss.text()), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
