@@ -1,5 +1,5 @@
-from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal
-from PySide2.QtGui import QColor, QFont, QDoubleValidator
+from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp
+from PySide2.QtGui import QColor, QFont, QDoubleValidator, QRegExpValidator
 from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QHeaderView, QSizePolicy,
                                QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea)
 
@@ -155,16 +155,21 @@ class StockPositions(QWidget):
         self.confirm = QPushButton("Confirm") 
 
         #Stop Loss/Take Profit + Validator to float
-        validator = QDoubleValidator()
-        validator.setBottom(-100)
-        validator.setDecimals(2)
-        validator.setNotation(QDoubleValidator.StandardNotation)
+        stopVal = QRegExpValidator(QRegExp("^-([1-9]{1,2}[0]?|100)+(\.[0-9]{0,2})?$"))
+        # stopVal.setBottom(-100)
+        # stopVal.setTop(0)
+        # stopVal.setDecimals(2)
+        # stopVal.setNotation(QDoubleValidator.StandardNotation)
+        profitVal = QDoubleValidator()
+        profitVal.setBottom(0)
+        profitVal.setDecimals(2)
+        profitVal.setNotation(QDoubleValidator.StandardNotation)
         self.stop_loss = QLineEdit()
         self.stop_loss.setPlaceholderText("Stop Loss %")
         self.take_profit = QLineEdit()
         self.take_profit.setPlaceholderText("Take Profit %")
-        self.stop_loss.setValidator(validator)
-        self.take_profit.setValidator(validator)
+        self.stop_loss.setValidator(stopVal)
+        self.take_profit.setValidator(profitVal)
         
 
         self.form_widget = QWidget()
