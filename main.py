@@ -8,6 +8,7 @@ import login as l
 
 #Custom Widgets
 from StockPositions import StockPositions
+from OptionPositions import OptionPositions
 from MainWindow import MainWindow
 
 #Helper Module
@@ -26,12 +27,16 @@ if __name__ == '__main__':
         if(login.exec_()==QDialog.Accepted):
             stockWidget = StockPositions()
             stockWidget.startTimer()
-            window = MainWindow(stockWidget)
+            optionsWidget = OptionPositions()
+            optionsWidget.startTimer()
+            window = MainWindow(stockWidget, optionsWidget)
             window.show()
     else:
         stockWidget = StockPositions()
         stockWidget.startTimer()
-        window = MainWindow(stockWidget)
+        optionsWidget = OptionPositions()
+        optionsWidget.startTimer()
+        window = MainWindow(stockWidget, optionsWidget)
         window.show()
 
     sys.exit(app.exec_())

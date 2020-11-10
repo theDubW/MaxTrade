@@ -76,23 +76,23 @@ class StockPositionsTable(QAbstractTableModel):
             n =  QAbstractItemModel.createIndex(self, i, 3, None)
             self.setData(n, self.pct_change[i])
 
-class PositionSet(QDialog):
-    def __init__(self, parent=None):
-        super(PositionSet, self).__init__(parent)
-        self.position_number = QLineEdit("Position Number")
-        self.stop_loss = QLineEdit("Stop Loss %")
-        self.take_profit = QLineEdit("Take Profit %")
-        self.confirm = QPushButton("Confirm") 
+# class PositionSet(QDialog):
+#     def __init__(self, parent=None):
+#         super(PositionSet, self).__init__(parent)
+#         self.position_number = QLineEdit("Position Number")
+#         self.stop_loss = QLineEdit("Stop Loss %")
+#         self.take_profit = QLineEdit("Take Profit %")
+#         self.confirm = QPushButton("Confirm") 
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.position_number)
-        layout.addWidget(self.stop_loss)
-        layout.addWidget(self.take_profit)
-        layout.addWidget(self.confirm)
-        self.setLayout(layout)
-        # self.confirm.clicked.connect(self.confirmLossGain)
-    def confirmLossGain(self):
-        print("Stop Loss: {}\nTake Profit: {}".format(self.stop_loss.text(), self.take_profit.text()))
+#         layout = QVBoxLayout()
+#         layout.addWidget(self.position_number)
+#         layout.addWidget(self.stop_loss)
+#         layout.addWidget(self.take_profit)
+#         layout.addWidget(self.confirm)
+#         self.setLayout(layout)
+#         # self.confirm.clicked.connect(self.confirmLossGain)
+#     def confirmLossGain(self):
+#         print("Stop Loss: {}\nTake Profit: {}".format(self.stop_loss.text(), self.take_profit.text()))
 
 class OutputBox(QScrollArea):
     def __init__(self):
@@ -112,7 +112,7 @@ class StockPositions(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.robinhood = r.Robinhood()
-        self.robinhood.updateHoldings()
+        self.robinhood.updateStockHoldings()
         self.positions = StockPositionsTable(self.robinhood.getStockHoldings())
         self.table_view = QTableView()
 
@@ -155,7 +155,7 @@ class StockPositions(QWidget):
         self.confirm = QPushButton("Confirm") 
 
         #Stop Loss/Take Profit + Validator to float
-        stopVal = QRegExpValidator(QRegExp("^-([1-9]{1,2}[0]?|100)+(\.[0-9]{0,2})?$"))
+        stopVal = QRegExpValidator(QRegExp("^-([0-9]{1,2}[0]?|100)+(\.[0-9]{0,2})?$"))
         # stopVal.setBottom(-100)
         # stopVal.setTop(0)
         # stopVal.setDecimals(2)
@@ -182,10 +182,10 @@ class StockPositions(QWidget):
         self.form_widget.setLayout(self.form_layout)
 
         #Add Slot connection to sold signal
-        self.robinhood.sold_stock_signal.connect(self.soldPosition)
+        self.robinhood.sold_stock_signal[list].connect(self.soldPosition)
         
         #Add Output Box
-        self.output_text = "Bot Output:\n\n"
+        self.output_text = "Stock Bot Output:\n\n"
         self.output_box = OutputBox()
         self.output_box.setText(self.output_text)
         self.output_box.setWidgetResizable(True)
@@ -203,17 +203,23 @@ class StockPositions(QWidget):
         #main layout
         self.setLayout(self.main_layout)
     def updateData(self):
-        self.robinhood.update()
+        self.robinhood.updateStocks()
         self.positions.load_data(self.robinhood.getStockHoldings())
         self.positions.updateTable()
         # print("Updated Data")
         return None
     def startTimer(self):
         self.timer.start(10000)
-    def soldPosition(self):
-        self.output_text += ("SOLD POSITION")
+    def soldPosition(self, soldInfo):
+        self.output_text += ("SOLD {} SHARES OF {} AT ${} FOR A {}% {}".format(soldInfo[0], soldInfo[1], soldInfo[2], soldInfo[3], "LOSS" if soldInfo[3]<0 else "GAIN"))
         self.output_box.setText(self.output_text)
+        #Deleting Ticker from available list
+        match_items = self.position_editing.findItems(soldInfo[1], Qt.MatchExactly)
+        for item in match_items:
+            row = self.position_editing.row(item)
+            self.position_editing.takeItem(row)
+        
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
-        self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 0, float(self.stop_loss.text()), float(self.take_profit.text()))
+        self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
