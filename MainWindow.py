@@ -33,6 +33,10 @@ class MainWidget(QWidget):
     def __init__(self, parent, stock_info, option_info):
         super(MainWidget, self).__init__(parent)
         self.layout = QHBoxLayout()
-        self.layout.addWidget(stock_info)
-        self.layout.addWidget(option_info)
+        self.layout.addWidget(stock_info, 1)
+        # self.layout.setAlignment(stock_info,)
+        # self.layout.setContentsMargins()
+        # self.layout.addSpacing()
+        self.layout.addWidget(option_info, 1)
+        # self.layout.setAlignment(option_info, Qt.AlignCenter)
         self.setLayout(self.layout)

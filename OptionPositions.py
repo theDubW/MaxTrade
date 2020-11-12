@@ -1,7 +1,7 @@
-from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp
+from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp, QSize
 from PySide2.QtGui import QColor, QFont, QDoubleValidator, QRegExpValidator
 from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QHeaderView, QSizePolicy,
-                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea)
+                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea, QAbstractItemView)
 import optionsBot as o
 
 class OptionPositionsTable(QAbstractTableModel):
@@ -120,22 +120,31 @@ class OptionPositions(QWidget):
         self.robinhood.updateOptionPositions()
         self.positions = OptionPositionsTable(self.robinhood.getOptionPositions())
         self.table_view = QTableView()
-
-        #Timer
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.updateData)
-
-
-        #Headers n stuff
         self.table_view.setModel(self.positions)
+        self.table_view.verticalHeader().setVisible(False)
         # self.table_view.adjustSize()
         self.horizontal_header = self.table_view.horizontalHeader()
         self.vertical_header = self.table_view.verticalHeader()
         self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
         self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.table_view.resizeColumnsToContents()
+        width = 3
+        for i in range(self.positions.columnCount()):
+            width = width+self.table_view.columnWidth(i)
+        print("OPTION WIDTH: "+str(width))
+        self.table_view.setMinimumWidth(width)
+        # self.table_view.setMaximumWidth(500)
+        self.table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        # self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        # self.table_view.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        #Timer
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.updateData)
 
         #Widget Layout
         self.main_layout = QGridLayout()
+        # self.main_layout = QVBoxLayout()
 
         # Add Label
         self.table_label = QLabel("Option Positions")
@@ -188,12 +197,23 @@ class OptionPositions(QWidget):
         self.output_box.setFixedSize(200, 100)
         # self.output_box.setGeometry(300, 100, 300, 100)
 
+        # self.main_layout.addWidget(self.table_label)
+        # self.main_layout.addWidget(self.table_view)
+        # self.main_layout.addWidget(self.form_widget)
+        # self.main_layout.addWidget(self.output_box)
+        # self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
+        # self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
+        # self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
+        # self.main_layout.closestAcceptableSize(self.table_view, QSize(100, 200))
+        # self.main_layout.setAlignment(self.table_view, Qt.AlignCenter)
+        # self.main_layout.SetMaximumSize
         self.main_layout.addWidget(self.table_label,1,0,1,0, Qt.AlignTrailing)
-        self.main_layout.addWidget(self.table_view,2,0,1,0,Qt.AlignTrailing)
+        self.main_layout.addWidget(self.table_view,2,1,1,1,Qt.AlignTrailing)
         self.main_layout.addWidget(self.form_widget,3,0,1,0,Qt.AlignTrailing)
         self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
-        self.main_layout.setAlignment(Qt.AlignLeft)
+        self.main_layout.setAlignment(Qt.AlignCenter)
         self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
+        self.main_layout.setAlignment(self.table_view, Qt.AlignHCenter)
         self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
         self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
         #main layout

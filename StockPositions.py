@@ -1,7 +1,7 @@
 from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp
 from PySide2.QtGui import QColor, QFont, QDoubleValidator, QRegExpValidator
 from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QHeaderView, QSizePolicy,
-                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea)
+                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea, QAbstractItemView)
 
 import robinhoodBot as r
 class StockPositionsTable(QAbstractTableModel):
@@ -115,6 +115,23 @@ class StockPositions(QWidget):
         self.robinhood.updateStockHoldings()
         self.positions = StockPositionsTable(self.robinhood.getStockHoldings())
         self.table_view = QTableView()
+        self.table_view.setModel(self.positions)
+        self.table_view.verticalHeader().setVisible(False)
+        # self.table_view.adjustSize()
+
+        self.table_view.resizeColumnsToContents()
+        width = 3
+        for i in range(self.positions.columnCount()):
+            width = width+self.table_view.columnWidth(i)
+        print("STOCK WIDTH: "+str(width))
+        self.table_view.setMaximumWidth(width)
+        self.horizontal_header = self.table_view.horizontalHeader()
+        self.vertical_header = self.table_view.verticalHeader()
+        self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        # self.table_view.setMaximumWidth(500)
+        self.table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
 
         #Timer
         self.timer = QTimer()
@@ -122,12 +139,7 @@ class StockPositions(QWidget):
 
 
         #Headers n stuff
-        self.table_view.setModel(self.positions)
-        self.table_view.adjustSize()
-        self.horizontal_header = self.table_view.horizontalHeader()
-        self.vertical_header = self.table_view.verticalHeader()
-        self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+
         # self.horizontal_header.setStretchLastSection(True)
 
         #Widget Layout
@@ -193,10 +205,11 @@ class StockPositions(QWidget):
         # self.output_box.setGeometry(300, 100, 300, 100)
 
         self.main_layout.addWidget(self.table_label,1,0,1,0, Qt.AlignTrailing)
-        self.main_layout.addWidget(self.table_view,2,0,1,0,Qt.AlignTrailing)
+        self.main_layout.addWidget(self.table_view,2,0,1,0,Qt.AlignCenter)
         self.main_layout.addWidget(self.form_widget,3,0,1,0,Qt.AlignTrailing)
         self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
-        self.main_layout.setAlignment(Qt.AlignLeft)
+        self.main_layout.setAlignment(Qt.AlignCenter)
+        self.main_layout.setAlignment(self.table_view, Qt.AlignHCenter)
         self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
         self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
         self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
