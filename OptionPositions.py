@@ -91,13 +91,13 @@ class OptionPositionsTable(QAbstractTableModel):
             n =  QAbstractItemModel.createIndex(self, i, 3, None)
             self.setData(n, self.exp_date[i])
         for i in range(len(self.quantity)):
-            n =  QAbstractItemModel.createIndex(self, i, 3, None)
+            n =  QAbstractItemModel.createIndex(self, i, 4, None)
             self.setData(n, self.quantity[i])
         for i in range(len(self.mark_price)):
-            n =  QAbstractItemModel.createIndex(self, i, 3, None)
+            n =  QAbstractItemModel.createIndex(self, i, 5, None)
             self.setData(n, self.mark_price[i])
         for i in range(len(self.percent_change)):
-            n =  QAbstractItemModel.createIndex(self, i, 3, None)
+            n =  QAbstractItemModel.createIndex(self, i, 6, None)
             self.setData(n, self.percent_change[i])
 class OutputBox(QScrollArea):
     def __init__(self):
@@ -227,7 +227,8 @@ class OptionPositions(QWidget):
     def startTimer(self):
         self.timer.start(10000)
     def soldPosition(self, soldInfo):
-        self.output_text += ("SOLD {} SHARES OF {} AT ${} FOR A {}% {}".format(soldInfo[0], soldInfo[1], soldInfo[2], soldInfo[3], "LOSS" if soldInfo[3]<0 else "GAIN"))
+        didProfit = soldInfo[4]>=0
+        self.output_text += ("SOLD {} CONTRACTS OF {} {} FOR ${} PER CONTRACT, FOR A {} OF {}, OR A {} OF {}%".format(soldInfo[0], soldInfo[1], soldInfo[2], soldInfo[3], "GAIN" if didProfit else "LOSS", "$"+str(soldInfo[4]) if didProfit else "-$"+str(-1*soldInfo[4]), "GAIN" if didProfit else "LOSS", soldInfo[5]))
         self.output_box.setText(self.output_text)
         #Deleting Ticker from available list
         match_items = self.position_editing.findItems(soldInfo[1], Qt.MatchExactly)
@@ -237,5 +238,6 @@ class OptionPositions(QWidget):
         
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
+        self.robinhood.sellOptionPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         # self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
