@@ -68,7 +68,7 @@ class OptionsBot(QObject):
     def checkOptionSold(self, orderId):
         pastOrders = r.get_all_option_orders('id')
         # pastOrders.append("SAMPLE_SELL_ID")
-        pastOrders.append("SAMPLE_TAKE_PROFIT_ID")
+        pastOrders.append("SAMPLE_SELL_ID")
         if(orderId in pastOrders):
             if(orderId !="SAMPLE_SELL_ID" and orderId != "SAMPLE_TAKE_PROFIT_ID"):
                 orderInfo = r.get_option_order_info(orderId)

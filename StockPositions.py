@@ -1,7 +1,7 @@
 from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp
 from PySide2.QtGui import QColor, QFont, QDoubleValidator, QRegExpValidator
-from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QHeaderView, QSizePolicy,
-                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea, QAbstractItemView)
+from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QFormLayout, QHeaderView, QSizePolicy,
+                               QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea, QAbstractItemView, QComboBox)
 
 import robinhoodBot as r
 class StockPositionsTable(QAbstractTableModel):
@@ -155,16 +155,24 @@ class StockPositions(QWidget):
         f.setPointSize(15)
         self.table_label.setFont(f)
         self.table_label.adjustSize()
-
+        
+        #Quantity combo box
+        self.quantity = QComboBox()
+        if(len(self.positions.quantity)>0):
+            for i in range(int(self.positions.quantity[0])):
+                self.quantity.addItem(str(i+1))
+        else:
+            self.quantity.addItem("0")
         #Add Stop Loss Form
         # self.position_number = QLineEdit("Position Number")
-        self.position_editing = QListWidget()
-        self.position_editing.setGeometry(50, 70, 100, 75)
+        self.position_editing = QComboBox()
+        # self.position_editing.setGeometry(50, 70, 100, 75)
         for i in self.positions.tickers:
-            self.position_editing.addItem(QListWidgetItem(i))
+            self.position_editing.addItem(i)
+        self.position_editing.currentIndexChanged.connect(self.changeQuantity)
         # self.position_editing.adjustSize()
-        self.position_editing.setResizeMode(QListView.Fixed)
-        self.confirm = QPushButton("Confirm") 
+        # self.position_editing.setResizeMode(QListView.Fixed)
+        self.confirm = QPushButton("Submit Order") 
 
         #Stop Loss/Take Profit + Validator to float
         stopVal = QRegExpValidator(QRegExp("^-([0-9]{1,2}[0]?|100)+(\.[0-9]{0,2})?$"))
@@ -177,19 +185,24 @@ class StockPositions(QWidget):
         profitVal.setDecimals(2)
         profitVal.setNotation(QDoubleValidator.StandardNotation)
         self.stop_loss = QLineEdit()
-        self.stop_loss.setPlaceholderText("Stop Loss %")
+        # self.stop_loss.setPlaceholderText("Stop Loss %")
         self.take_profit = QLineEdit()
-        self.take_profit.setPlaceholderText("Take Profit %")
+        # self.take_profit.setPlaceholderText("Take Profit %")
         self.stop_loss.setValidator(stopVal)
         self.take_profit.setValidator(profitVal)
         
 
         self.form_widget = QWidget()
-        self.form_layout = QVBoxLayout()
-        self.form_layout.addWidget(self.position_editing)
-        self.form_layout.addWidget(self.stop_loss)
-        self.form_layout.addWidget(self.take_profit)
-        self.form_layout.addWidget(self.confirm)
+        self.form_layout = QFormLayout()
+        self.form_layout.addRow(QLabel("Ticker"),self.position_editing)
+        self.form_layout.addRow(QLabel("Quantity"),self.quantity)
+        self.form_layout.addRow(QLabel("Stop Loss %"),self.stop_loss)
+        self.form_layout.addRow(QLabel("Take Profit %"),self.take_profit)
+        self.form_layout.addRow(self.confirm)
+        # self.form_layout.addWidget(self.position_editing)
+        # self.form_layout.addWidget(self.stop_loss)
+        # self.form_layout.addWidget(self.take_profit)
+        # self.form_layout.addWidget(self.confirm)
         self.confirm.clicked.connect(self.updateOutput)
         self.form_widget.setLayout(self.form_layout)
 
@@ -221,18 +234,23 @@ class StockPositions(QWidget):
         self.positions.updateTable()
         # print("Updated Data")
         return None
+    def changeQuantity(self, index):
+        self.quantity.clear()
+        for i in range(int(self.positions.quantity[index])):
+            self.quantity.addItem(str(i+1))
+        # print("TICKER CHANGED, TIME TO CHANGE QUANTITY")
     def startTimer(self):
         self.timer.start(10000)
     def soldPosition(self, soldInfo):
         self.output_text += ("SOLD {} SHARES OF {} AT ${} FOR A {}% {}".format(soldInfo[0], soldInfo[1], soldInfo[2], soldInfo[3], "LOSS" if soldInfo[3]<0 else "GAIN"))
         self.output_box.setText(self.output_text)
         #Deleting Ticker from available list
-        match_items = self.position_editing.findItems(soldInfo[1], Qt.MatchExactly)
-        for item in match_items:
-            row = self.position_editing.row(item)
-            self.position_editing.takeItem(row)
+        # match_items = self.position_editing.findItems(soldInfo[1], Qt.MatchExactly)
+        # for item in match_items:
+        #     row = self.position_editing.row(item)
+        #     self.position_editing.takeItem(row)
         
     def updateOutput(self):
-        self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentItem().text(),self.stop_loss.text(), self.take_profit.text()))
-        self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
+        self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentText(),self.stop_loss.text(), self.take_profit.text()))
+        self.robinhood.sellStockPosition(self.position_editing.currentText(), int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
