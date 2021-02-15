@@ -1,6 +1,6 @@
 from PySide2.QtCore import Qt, QAbstractTableModel, QAbstractItemModel, QModelIndex, QTimer, Signal, QRegExp
 from PySide2.QtGui import QColor, QFont, QDoubleValidator, QRegExpValidator
-from PySide2.QtWidgets import (QVBoxLayout, QGridLayout, QFormLayout, QHeaderView, QSizePolicy,
+from PySide2.QtWidgets import (QVBoxLayout, QHBoxLayout, QGridLayout, QFormLayout, QHeaderView, QSizePolicy,
                                QTableView, QWidget, QLabel, QLayout, QDialog, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QListView, QScrollArea, QAbstractItemView, QComboBox)
 
 import robinhoodBot as r
@@ -128,7 +128,8 @@ class StockPositions(QWidget):
         self.horizontal_header = self.table_view.horizontalHeader()
         self.vertical_header = self.table_view.verticalHeader()
         self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.horizontal_header.setStretchLastSection(True)
+        # self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
         # self.table_view.setMaximumWidth(500)
         self.table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
@@ -144,16 +145,20 @@ class StockPositions(QWidget):
 
         #Widget Layout
         self.main_layout = QGridLayout()
+        # self.main_layout = QHBoxLayout()
+        # self.main_layout.setAlignment(Qt.AlignTop)
+        self.setLayout(self.main_layout)
+
         # size = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
         # Add Label
         self.table_label = QLabel("Stock Positions")
         # self.table_label.setStyleSheet("border: 1px solid black;")
         # self.table_label.move(100,0)
-        f = QFont()
-        f.setBold(True)
-        f.setPointSize(15)
-        self.table_label.setFont(f)
+        title = QFont()
+        title.setBold(True)
+        title.setPointSize(15)
+        self.table_label.setFont(title)
         self.table_label.adjustSize()
         
         #Quantity combo box
@@ -190,7 +195,19 @@ class StockPositions(QWidget):
         # self.take_profit.setPlaceholderText("Take Profit %")
         self.stop_loss.setValidator(stopVal)
         self.take_profit.setValidator(profitVal)
-        
+
+        self.bot_label = QLabel("Stock Trading Bot")
+        self.bot_label.setFont(title)
+        self.bot_label.adjustSize()
+        # self.bot_label.setAlignment(Qt.AlignHCenter)
+
+        #Add Output Box
+        self.output_text = "Stock Bot Output:\n\n"
+        self.output_box = OutputBox()
+        self.output_box.setText(self.output_text)
+        self.output_box.setWidgetResizable(True)
+        self.output_box.setFixedSize(200, 100)
+        # self.output_box.setAlignment(Qt.AlignTop)
 
         self.form_widget = QWidget()
         self.form_layout = QFormLayout()
@@ -199,35 +216,46 @@ class StockPositions(QWidget):
         self.form_layout.addRow(QLabel("Stop Loss %"),self.stop_loss)
         self.form_layout.addRow(QLabel("Take Profit %"),self.take_profit)
         self.form_layout.addRow(self.confirm)
-        # self.form_layout.addWidget(self.position_editing)
-        # self.form_layout.addWidget(self.stop_loss)
-        # self.form_layout.addWidget(self.take_profit)
-        # self.form_layout.addWidget(self.confirm)
         self.confirm.clicked.connect(self.updateOutput)
         self.form_widget.setLayout(self.form_layout)
+
+        #Current orders section
+        self.curr_orders_title = QLabel("Current Orders")
+        subtitle = QFont()
+        subtitle.setPointSize(12)
+        self.curr_orders_title.setFont(subtitle)
+
+        self.bot_widget = QWidget()
+        self.bot_layout = QVBoxLayout()
+        self.bot_layout.setSpacing(0)
+        self.bot_widget.setLayout(self.bot_layout)
+        # self.bot_layout.addWidget(self.bot_label, Qt.AlignTop)
+        self.bot_layout.addWidget(self.form_widget, Qt.AlignTop)
+        self.bot_layout.addWidget(self.output_box, Qt.AlignHCenter)
+        self.bot_layout.addWidget(self.curr_orders_title, Qt.AlignHCenter)
+        self.bot_layout.setAlignment(Qt.AlignHCenter)
+        
 
         #Add Slot connection to sold signal
         self.robinhood.sold_stock_signal[list].connect(self.soldPosition)
         
-        #Add Output Box
-        self.output_text = "Stock Bot Output:\n\n"
-        self.output_box = OutputBox()
-        self.output_box.setText(self.output_text)
-        self.output_box.setWidgetResizable(True)
-        self.output_box.setFixedSize(200, 100)
         # self.output_box.setGeometry(300, 100, 300, 100)
 
-        self.main_layout.addWidget(self.table_label,1,0,1,0, Qt.AlignTrailing)
-        self.main_layout.addWidget(self.table_view,2,0,1,0,Qt.AlignCenter)
-        self.main_layout.addWidget(self.form_widget,3,0,1,0,Qt.AlignTrailing)
-        self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
-        self.main_layout.setAlignment(Qt.AlignCenter)
+        self.main_layout.addWidget(self.table_label,1,0,Qt.AlignCenter)
+        self.main_layout.addWidget(self.table_view,2,0,Qt.AlignHCenter)
+        self.main_layout.addWidget(self.bot_label, 1, 1, Qt.AlignCenter)
+        # self.main_layout.addLayout(self.bot_layout)
+        self.main_layout.addWidget(self.bot_widget,2,1,Qt.AlignTop)
+        # self.main_layout.addWidget(QLabel("TESTING"),3,1, 1, 1)
+
+        self.main_layout.setAlignment(Qt.AlignTop)
         self.main_layout.setAlignment(self.table_view, Qt.AlignHCenter)
-        self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
-        self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
-        self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
+        self.main_layout.setAlignment(self.table_label, Qt.AlignHCenter)
+        # self.main_layout.setAlignment(self.bot_widget, Qt.AlignTop)
+        # self.main_layout.setAlignment(self.bot_label, Qt.AlignHCenter)
+        # self.main_layout.setAlignment(self.output_box, Qt.AlignHCenter|Qt.AlignTop)
         #main layout
-        self.setLayout(self.main_layout)
+        
     def updateData(self):
         self.robinhood.updateStocks()
         self.positions.load_data(self.robinhood.getStockHoldings())
@@ -252,5 +280,6 @@ class StockPositions(QWidget):
         
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentText(),self.stop_loss.text(), self.take_profit.text()))
+        self.robinhood.cancelAllStockOrders(self.position_editing.currentText())
         self.robinhood.sellStockPosition(self.position_editing.currentText(), int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)

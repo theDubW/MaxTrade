@@ -10,6 +10,7 @@ class OptionsBot(QObject):
     def __init__(self):
         super(OptionsBot, self).__init__()
         self.option_positions = {}
+        self.hasCanceledStopLimit = 0
         empty_dic = {}
         temp_outfile = open("Sell_Option_Positions","wb")
         pickle.dump(empty_dic, temp_outfile)
@@ -19,11 +20,11 @@ class OptionsBot(QObject):
         for option in self.option_positions:
             info = self.getOptionInfo(option)
             instr = self.getInstrData(option)
-            positions[option['chain_symbol']] = {"Strike Price":float(instr['strike_price']), "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":float(option['quantity']),"Market Price":float(info['mark_price']),"Percent Change":self.optionPercentChange(option, info)}
+            positions[option['chain_symbol']] = {"Strike Price":float(instr['strike_price']), "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":float(option['quantity']),"Market Price":float(info['adjusted_mark_price']),"Percent Change":self.optionPercentChange(option, info)}
         pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Strike Price","Type","Expiration Date","Quantity","Market Price", "Percent Change"])
         return pos_to_pd
     def optionPercentChange(self, option, info):
-        return round((float(info['mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
+        return round((float(info['adjusted_mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
     def getOptionInfo(self, option):
         # inst = option['option']
         # inst=inst[:len(inst)-1]
@@ -44,13 +45,20 @@ class OptionsBot(QObject):
         return False
     def sellOptionPosition(self, ticker, quantity, stop_loss, take_profit):
         # print("Stop %:{}".format(stop_loss))
+        print("CANCELING ALL PREVIOUS {} ORDERS".format(ticker))
+        self.cancelAllOptionOrders(ticker)
         currOption = self.getOptionPosition(ticker)
         instr_data = self.getInstrData(currOption)
         stopPrice = round(float(currOption['average_price'])*(1-stop_loss/100.0),2)
         # TODO add support for short calls etc.
-        # out_order = r.orders.order_sell_option_stop_limit('close', 'credit', stopPrice, stopPrice, ticker, quantity, instr_data['expiration_date'], instr_data['strike_price'], optionType=instr_data['type'], timeInForce='gtc')
-        out_order = {'id':'SAMPLE_SELL_ID'}
-        order = {'bought_price':float(currOption['average_price']), 'take_profit':round(float(currOption['average_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, 'quantity': quantity, 'expiration_date':instr_data['expiration_date'], 'strike_price':instr_data['strike_price'], 'type':instr_data['type'], 'id':out_order['id']}
+        
+        out_order = r.orders.order_sell_option_stop_limit('close', 'credit', stopPrice, stopPrice, ticker, quantity, instr_data['expiration_date'], instr_data['strike_price'], optionType=instr_data['type'], timeInForce='gtc')
+        # out_order = {'id':'SAMPLE_SELL_ID'}
+        print(out_order)
+        while(out_order.get('id') == None):
+            out_order = r.orders.order_sell_option_stop_limit('close', 'credit', stopPrice, stopPrice, ticker, quantity, instr_data['expiration_date'], instr_data['strike_price'], optionType=instr_data['type'], timeInForce='gtc')
+
+        order = {'bought_price':float(currOption['average_price']), 'take_profit':round(float(currOption['average_price'])*(1+take_profit/100.0),1)/float(currOption['trade_value_multiplier']), 'stop_loss':stopPrice, 'quantity': quantity, 'expiration_date':instr_data['expiration_date'], 'strike_price':instr_data['strike_price'], 'type':instr_data['type'], 'id':out_order['id']}
         infile = open("Sell_Option_Positions", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
@@ -68,7 +76,7 @@ class OptionsBot(QObject):
     def checkOptionSold(self, orderId):
         pastOrders = r.get_all_option_orders('id')
         # pastOrders.append("SAMPLE_SELL_ID")
-        pastOrders.append("SAMPLE_SELL_ID")
+        # pastOrders.append("SAMPLE_SELL_ID")
         if(orderId in pastOrders):
             if(orderId !="SAMPLE_SELL_ID" and orderId != "SAMPLE_TAKE_PROFIT_ID"):
                 orderInfo = r.get_option_order_info(orderId)
@@ -108,7 +116,8 @@ class OptionsBot(QObject):
         self.updateOptionPositions()
         orders = self.getCurrOptionOrders()
         for order in orders:
-            print("ORDER ID: {}".format(orders[order]['id']))
+            # print("ORDER ID: {}".format(orders[order]['id']))
+            print("Current Price: {}, Take profit price: {}".format(float(self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price']), orders[order]['take_profit']))
             if(self.checkOptionSold(orders[order]['id'])):
                 info = self.getOptionSoldInfo(orders[order]['id'], order)
                 print("SOLD {} CONTRACTS OF {} POSITION FOR A PROFIT OF {}".format(info['quantity'], order, info['profit']))
@@ -116,17 +125,42 @@ class OptionsBot(QObject):
                 self.sold_option_signal.emit([info['quantity'], order, orders[order]['type'], info['sell_price'], info['profit'], round(100*info['profit']/(orders[order]['bought_price']*orders[order]['quantity']),2)])
                 # self.sold_option_signal.emit(info['quantity'], order, info['profit']/)
                 self.deleteOptionOrder(order)
-            # elif float(self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price']) >= orders[order]['take_profit']:
-            elif 170.0 >= orders[order]['take_profit']:
-                print("Cancelling current option sell order")
+            # elif  >= orders[order]['take_profit']:
+            elif float(self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price']) >= orders[order]['take_profit'] and self.hasCanceledStopLimit == 0:
+                print("Cancelling current option stop limit order")
                 self.cancelAllOptionOrders(order)
                 print("Placing sell order for option as take profit price has been reached")
-                # out_order = r.orders.order_sell_option_limit(positionEffect='close',creditOrDebit='credit',price=self.getOptionPosition(order)['adjusted_mark_price'], symbol=order, quantity=orders[order]['quantity'], expirationDate=orders[order]['expiration_date'], strike=orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
-                out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
+                out_order = r.orders.order_sell_option_limit(positionEffect='close',creditOrDebit='credit',price=self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price'], symbol=order, quantity=orders[order]['quantity'], expirationDate=orders[order]['expiration_date'], strike=orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
+                if(out_order.get("id") != None):
+                    self.hasCanceledStopLimit = 1
+                else:
+                    continue
+                print(out_order)
+                # out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
                 #Changing the order id in pickle file
                 infile = open("Sell_Option_Positions", 'rb')
                 curr_orders = pickle.load(infile)
                 infile.close()
+                print(curr_orders[order])
+                curr_orders[order]['id'] = out_order['id'] 
+                outfile = open("Sell_Option_Positions",'wb')
+                pickle.dump(curr_orders, outfile)
+                outfile.close()
+            #If I've placed sell take profit order, but price drops below again
+            elif float(self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price']) < orders[order]['take_profit'] and self.hasCanceledStopLimit==1:
+                print("Cancelling current option market order, price dipped again")
+                self.cancelAllOptionOrders(order)
+                # stopPrice = round(float(currOption['average_price'])*(1-stop_loss/100.0),2)
+                # TODO add support for short calls etc.
+                out_order = r.orders.order_sell_option_stop_limit('close', 'credit', orders[order]['stop_loss'], orders[order]['stop_loss'], order, orders[order]['quantity'], orders[order]['expiration_date'], orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
+                if(out_order.get("id") != None):
+                    self.hasCanceledStopLimit=0
+                else:
+                    continue
+                infile = open("Sell_Option_Positions", 'rb')
+                curr_orders = pickle.load(infile)
+                infile.close()
+                print(curr_orders[order])
                 curr_orders[order]['id'] = out_order['id'] 
                 outfile = open("Sell_Option_Positions",'wb')
                 pickle.dump(curr_orders, outfile)
