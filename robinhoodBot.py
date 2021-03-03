@@ -72,7 +72,7 @@ class Robinhood(QObject):
             pending_outfile.close()
         else:
             # out_order = {'id':'SAMPLE_SELL_ID'}
-            order = {'bought_price':float(self.getStockPosition(ticker)['average_buy_price']), 'take_profit':round(float(self.getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, 'quantity':quantity, "id":out_order['id']}
+            order = {'bought_price':float(self.getStockPosition(ticker)['average_buy_price']), 'take_profit':round(float(self.getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, "tp_percent":take_profit,"sl_percent":stop_loss, 'quantity':quantity, "id":out_order['id']}
             infile = open("Sell_Stock_Positions.pkl", 'rb')
             curr_orders = pickle.load(infile)
             infile.close()
@@ -89,6 +89,7 @@ class Robinhood(QObject):
         for order in currOrders:
             if(r.stocks.get_instrument_by_url(order['instrument'],"symbol")==ticker):
                 r.orders.cancel_stock_order(order['id'])
+        
     #Check if stock sell has been executed
     def checkStockSold(self, orderId):
         pastOrders = r.get_all_stock_orders('id')

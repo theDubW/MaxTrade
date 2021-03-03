@@ -207,7 +207,7 @@ class StockPositions(QWidget):
         self.output_box.setText(self.output_text)
         self.output_box.setWidgetResizable(True)
         self.output_box.setFixedSize(200, 100)
-        # self.output_box.setAlignment(Qt.AlignTop)
+        self.output_box.setAlignment(Qt.AlignHCenter)
 
         self.form_widget = QWidget()
         self.form_layout = QFormLayout()
@@ -219,12 +219,7 @@ class StockPositions(QWidget):
         self.confirm.clicked.connect(self.updateOutput)
         self.form_widget.setLayout(self.form_layout)
 
-        #Current orders section
-        self.curr_orders_title = QLabel("Current Orders")
-        subtitle = QFont()
-        subtitle.setPointSize(12)
-        self.curr_orders_title.setFont(subtitle)
-
+        #Trading bot section
         self.bot_widget = QWidget()
         self.bot_layout = QVBoxLayout()
         self.bot_layout.setSpacing(0)
@@ -232,8 +227,22 @@ class StockPositions(QWidget):
         # self.bot_layout.addWidget(self.bot_label, Qt.AlignTop)
         self.bot_layout.addWidget(self.form_widget, Qt.AlignTop)
         self.bot_layout.addWidget(self.output_box, Qt.AlignHCenter)
-        self.bot_layout.addWidget(self.curr_orders_title, Qt.AlignHCenter)
         self.bot_layout.setAlignment(Qt.AlignHCenter)
+
+        #Current orders section
+        self.curr_orders_title = QLabel("Current Orders")
+        subtitle = QFont()
+        subtitle.setPointSize(12)
+        self.curr_orders_title.setFont(subtitle)
+        self.curr_orders_title.setAlignment(Qt.AlignHCenter)
+        self.bot_layout.addWidget(self.curr_orders_title, Qt.AlignHCenter)
+
+        self.curr_orders = QGridLayout()
+        
+        self.updateOrders()
+
+
+
         
 
         #Add Slot connection to sold signal
@@ -269,9 +278,79 @@ class StockPositions(QWidget):
         # print("TICKER CHANGED, TIME TO CHANGE QUANTITY")
     def startTimer(self):
         self.timer.start(10000)
+    def orderCanceled(self, ticker):
+        print("ORDER CANCELED FOR: "+ticker)
+        self.robinhood.cancelAllStockOrders(ticker)
+        # print("ORDER CANCELLED FOR ROW NUMBER "+str(row_num))
+        self.robinhood.deleteStockOrder(ticker)
+        self.updateOrders()
+        # for i in range(5):
+        #     print("Item at "+str(row_num)+", "+str(i))
+            # del self.curr_orders.itemAtPosition(row_num,i).widget()
+            # self.curr_orders.removeWidget(self.curr_orders.itemAtPosition(row_num,i).widget())
+            # self.curr_orders.takeAt
+            # self.curr_orders.addWidget(QWidget(),row_num,i)
+        # self.curr_orders.update()
+    #Redo current orders layout can't delete row b/c display bug
+    def updateOrders(self):
+        if self.curr_orders.count()>0:
+            for i in reversed(range(self.curr_orders.rowCount())):
+                for j in range(self.curr_orders.columnCount()):
+                    print("i:{}, j:{}".format(i,j))
+                    widgetToRemove = self.curr_orders.itemAtPosition(i,j).widget()
+                    # remove it from the layout list
+                    self.curr_orders.removeWidget(widgetToRemove)
+                    # remove it from the gui
+                    widgetToRemove.deleteLater()
+        self.curr_orders.update()
+        temp_layout=QGridLayout()
+        
+        t_label=QLabel("Ticker")
+        order_font = QFont()
+        order_font.setPointSize(10)
+        t_label.setFont(order_font)
+        q_label=QLabel("Quantity")
+        q_label.setFont(order_font)
+        sl_label=QLabel("Stop Loss %")
+        sl_label.setFont(order_font)
+        tp_label=QLabel("Take Profit %")
+        tp_label.setFont(order_font)
+        temp_layout.addWidget(t_label,0,0)
+        temp_layout.addWidget(q_label,0,1)
+        temp_layout.addWidget(sl_label,0,2)
+        temp_layout.addWidget(tp_label,0,3)
+        temp_layout.addWidget(QWidget(),0,4)
+        
+        print("CUR_ORDERS INITIAL SIZE: "+str(self.curr_orders.count()))
+        curr_orders = self.robinhood.getCurrStockOrders()
+        print(print("CUR ORDERS: "+str(curr_orders)))
+        i=1
+        # self.row_num 
+        # self.curr_order_ticker = ""
+        for order in curr_orders:
+            temp_layout.addWidget(QLabel(str(order)),i,0)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["quantity"])),i,1)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["sl_percent"])),i,2)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["tp_percent"])),i,3)
+            cancel_button = QPushButton("Cancel")
+            
+            # print("i: "+str(i))
+            # self.curr_order_ticker=str(order)
+            row_num=i
+            ticker=str(order)+""
+            cancel_button.released.connect(lambda x=ticker:self.orderCanceled(str(x)))
+            temp_layout.addWidget(cancel_button,i,4)
+            i+=1
+        self.curr_orders.setParent(None)
+        self.curr_orders = temp_layout
+        self.bot_layout.addLayout(self.curr_orders)
+        print("CUR_ORDERS END SIZE: "+str(self.curr_orders.count()))
+        self.curr_orders.update()
+
     def soldPosition(self, soldInfo):
         self.output_text += ("SOLD {} SHARES OF {} AT ${} FOR A {}% {}".format(soldInfo[0], soldInfo[1], soldInfo[2], soldInfo[3], "LOSS" if soldInfo[3]<0 else "GAIN"))
         self.output_box.setText(self.output_text)
+
         #Deleting Ticker from available list
         # match_items = self.position_editing.findItems(soldInfo[1], Qt.MatchExactly)
         # for item in match_items:
@@ -283,3 +362,15 @@ class StockPositions(QWidget):
         self.robinhood.cancelAllStockOrders(self.position_editing.currentText())
         self.robinhood.sellStockPosition(self.position_editing.currentText(), int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
+        #Adding to Curr orders
+        # row_to_add = self.curr_orders.rowCount()+1
+        # print("Adding to row: "+str(row_to_add))
+        # self.curr_orders.addWidget(QLabel(self.position_editing.currentText()),row_to_add,0)
+        # self.curr_orders.addWidget(QLabel(self.quantity.currentText()),row_to_add,1)
+        # self.curr_orders.addWidget(QLabel(self.stop_loss.text()),row_to_add,2)
+        # self.curr_orders.addWidget(QLabel(self.take_profit.text()),row_to_add,3)
+        # cancel_button = QPushButton("Cancel")
+        # print("ADDING LABEL"+str(row_to_add))
+        # cancel_button.clicked.connect(lambda x=self.position_editing.currentText():self.orderCanceled(self.position_editing.currentText()))
+        # self.curr_orders.addWidget(cancel_button,row_to_add,4)
+        self.updateOrders()
