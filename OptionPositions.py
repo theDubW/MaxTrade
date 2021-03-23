@@ -163,8 +163,11 @@ class OptionPositions(QWidget):
         #Add Stop Loss Form
         self.position_editing = QComboBox()
         # self.position_editing.setGeometry(50, 70, 100, 75)
-        for i in self.positions.tickers:
-            self.position_editing.addItem(i)
+        if(len(self.positions.quantity)>0):
+            for i in self.positions.tickers:
+                self.position_editing.addItem(i)
+        else:
+            self.quantity.addItem("0")
         self.position_editing.currentIndexChanged.connect(self.changeQuantity)
             # self.position_editing = QListWidget()
             # # self.position_editing.setGeometry(50, 70, 100, 75)
@@ -187,6 +190,12 @@ class OptionPositions(QWidget):
         self.stop_loss.setValidator(stopVal)
         self.take_profit.setValidator(profitVal)
         
+        #Add Output Box
+        self.output_text = "Option Bot Output:\n\n"
+        self.output_box = OutputBox()
+        self.output_box.setText(self.output_text)
+        self.output_box.setWidgetResizable(True)
+        self.output_box.setFixedSize(200, 100)
 
         self.form_widget = QWidget()
         # self.form_layout = QVBoxLayout()
@@ -196,24 +205,36 @@ class OptionPositions(QWidget):
         self.form_layout.addRow(QLabel("Stop Loss %"),self.stop_loss)
         self.form_layout.addRow(QLabel("Take Profit %"),self.take_profit)
         self.form_layout.addRow(self.confirm)
-
-        # self.form_layout.addWidget(self.position_editing)
-        # self.form_layout.addWidget(self.quantity)
-        # self.form_layout.addWidget(self.stop_loss)
-        # self.form_layout.addWidget(self.take_profit)
-        # self.form_layout.addWidget(self.confirm)
         self.confirm.clicked.connect(self.updateOutput)
         self.form_widget.setLayout(self.form_layout)
-
         #Add Slot connection to sold signal
         self.robinhood.sold_option_signal[list].connect(self.soldPosition)
-        
-        #Add Output Box
-        self.output_text = "Option Bot Output:\n\n"
-        self.output_box = OutputBox()
-        self.output_box.setText(self.output_text)
-        self.output_box.setWidgetResizable(True)
-        self.output_box.setFixedSize(200, 100)
+
+        #Trading bot section
+        self.bot_label = QLabel("Option Trading Bot")
+        self.bot_label.setFont(f)
+        self.bot_label.adjustSize()
+
+        self.bot_widget = QWidget()
+        self.bot_layout = QVBoxLayout()
+        self.bot_layout.setSpacing(0)
+        self.bot_widget.setLayout(self.bot_layout)
+        # self.bot_layout.addWidget(self.bot_label, Qt.AlignTop)
+        self.bot_layout.addWidget(self.form_widget, Qt.AlignTop)
+        self.bot_layout.addWidget(self.output_box, Qt.AlignHCenter)
+        self.bot_layout.setAlignment(Qt.AlignHCenter)
+
+        #Current orders section
+        self.curr_orders_title = QLabel("Current Orders")
+        subtitle = QFont()
+        subtitle.setPointSize(12)
+        self.curr_orders_title.setFont(subtitle)
+        self.curr_orders_title.setAlignment(Qt.AlignHCenter)
+        self.bot_layout.addWidget(self.curr_orders_title, Qt.AlignHCenter)
+
+        self.curr_orders = QGridLayout()
+        self.updateOrders()
+
         # self.output_box.setGeometry(300, 100, 300, 100)
 
         # self.main_layout.addWidget(self.table_label)
@@ -226,17 +247,73 @@ class OptionPositions(QWidget):
         # self.main_layout.closestAcceptableSize(self.table_view, QSize(100, 200))
         # self.main_layout.setAlignment(self.table_view, Qt.AlignCenter)
         # self.main_layout.SetMaximumSize
-        self.main_layout.addWidget(self.table_label,1,0,1,0, Qt.AlignTrailing)
-        self.main_layout.addWidget(self.table_view,2,1,1,1,Qt.AlignTrailing)
-        self.main_layout.addWidget(self.form_widget,3,0,1,0,Qt.AlignTrailing)
-        self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
-        self.main_layout.setAlignment(Qt.AlignCenter)
-        self.main_layout.setAlignment(self.table_label, Qt.AlignCenter)
+        self.main_layout.addWidget(self.table_label,1,0, Qt.AlignCenter)
+        self.main_layout.addWidget(self.table_view,2,0,Qt.AlignHCenter)
+        self.main_layout.addWidget(self.bot_label,1,1,Qt.AlignCenter)
+        # self.main_layout.addWidget(self.output_box,4,0,1,0,Qt.AlignTrailing)
+        self.main_layout.setAlignment(Qt.AlignTop)
+        self.main_layout.addWidget(self.bot_widget,2,1,Qt.AlignTop)
         self.main_layout.setAlignment(self.table_view, Qt.AlignHCenter)
-        self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
-        self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
+        self.main_layout.setAlignment(self.table_label, Qt.AlignHCenter)
+        # self.main_layout.setAlignment(self.table_view, Qt.AlignHCenter)
+        # self.main_layout.setAlignment(self.form_widget, Qt.AlignCenter)
+        # self.main_layout.setAlignment(self.output_box, Qt.AlignCenter)
         #main layout
         self.setLayout(self.main_layout)
+    def updateOrders(self):
+        if self.curr_orders.count()>0:
+            for i in reversed(range(self.curr_orders.rowCount())):
+                for j in range(self.curr_orders.columnCount()):
+                    print("i:{}, j:{}".format(i,j))
+                    widgetToRemove = self.curr_orders.itemAtPosition(i,j).widget()
+                    # remove it from the layout list
+                    self.curr_orders.removeWidget(widgetToRemove)
+                    # remove it from the gui
+                    widgetToRemove.deleteLater()
+        self.curr_orders.update()
+        temp_layout=QGridLayout()
+        
+        t_label=QLabel("Ticker")
+        order_font = QFont()
+        order_font.setPointSize(10)
+        t_label.setFont(order_font)
+        q_label=QLabel("Quantity")
+        q_label.setFont(order_font)
+        sl_label=QLabel("Stop Loss %")
+        sl_label.setFont(order_font)
+        tp_label=QLabel("Take Profit %")
+        tp_label.setFont(order_font)
+        temp_layout.addWidget(t_label,0,0)
+        temp_layout.addWidget(q_label,0,1)
+        temp_layout.addWidget(sl_label,0,2)
+        temp_layout.addWidget(tp_label,0,3)
+        temp_layout.addWidget(QWidget(),0,4)
+        
+        # print("CUR_ORDERS INITIAL SIZE: "+str(self.curr_orders.count()))
+        curr_orders = self.robinhood.getCurrOptionOrders()
+        # print(print("CUR ORDERS: "+str(curr_orders)))
+        i=1
+        # self.row_num 
+        # self.curr_order_ticker = ""
+        for order in curr_orders:
+            temp_layout.addWidget(QLabel(str(order)),i,0)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["quantity"])),i,1)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["sl_percent"])),i,2)
+            temp_layout.addWidget(QLabel(str(curr_orders[order]["tp_percent"])),i,3)
+            cancel_button = QPushButton("Cancel")
+            
+            # print("i: "+str(i))
+            # self.curr_order_ticker=str(order)
+            row_num=i
+            ticker=str(order)+""
+            cancel_button.released.connect(lambda x=ticker:self.orderCanceled(str(x)))
+            temp_layout.addWidget(cancel_button,i,4)
+            i+=1
+        self.curr_orders.setParent(None)
+        self.curr_orders = temp_layout
+        self.bot_layout.addLayout(self.curr_orders)
+        # print("CUR_ORDERS END SIZE: "+str(self.curr_orders.count()))
+        self.curr_orders.update()
     def updateData(self):
         self.robinhood.updateOptions()
         self.positions.load_data(self.robinhood.getOptionPositions())
@@ -258,6 +335,8 @@ class OptionPositions(QWidget):
         # for item in match_items:
         #     row = self.position_editing.row(item)
         #     self.position_editing.takeItem(row)
+    def orderCanceled(self, ticker):
+        print("order canceled for {} option".format(ticker))
         
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentText(),self.stop_loss.text(), self.take_profit.text()))

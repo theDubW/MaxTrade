@@ -104,6 +104,7 @@ class OutputBox(QScrollArea):
         self.label = QLabel(content)
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.label.setWordWrap(True)
+        self.label.setAlignment(Qt.AlignHCenter)
         self.setStyleSheet("QWidget{background-color:white};")
         layout.addWidget(self.label)
     def setText(self, text):
@@ -112,7 +113,7 @@ class StockPositions(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.robinhood = r.Robinhood()
-        self.robinhood.updateStockHoldings()
+        self.robinhood.updateAllStockData()
         self.positions = StockPositionsTable(self.robinhood.getStockHoldings())
         self.table_view = QTableView()
         self.table_view.setModel(self.positions)
@@ -137,6 +138,8 @@ class StockPositions(QWidget):
         #Timer
         self.timer = QTimer()
         self.timer.timeout.connect(self.updateData)
+        self.botTimer = QTimer()
+        self.botTimer.timeout.connect(self.updateBot)
 
 
         #Headers n stuff
@@ -271,18 +274,23 @@ class StockPositions(QWidget):
         self.positions.updateTable()
         # print("Updated Data")
         return None
+    def updateBot(self):
+        self.robinhood.updateBot()
     def changeQuantity(self, index):
         self.quantity.clear()
         for i in range(int(self.positions.quantity[index])):
             self.quantity.addItem(str(i+1))
         # print("TICKER CHANGED, TIME TO CHANGE QUANTITY")
     def startTimer(self):
-        self.timer.start(10000)
+        self.timer.start(30000)
+        self.botTimer.start(2000)
     def orderCanceled(self, ticker):
         print("ORDER CANCELED FOR: "+ticker)
         self.robinhood.cancelAllStockOrders(ticker)
         # print("ORDER CANCELLED FOR ROW NUMBER "+str(row_num))
         self.robinhood.deleteStockOrder(ticker)
+        self.output_text+="Canceled sell order for "+ticker
+        self.output_box.setText(self.output_text)
         self.updateOrders()
         # for i in range(5):
         #     print("Item at "+str(row_num)+", "+str(i))
@@ -321,9 +329,9 @@ class StockPositions(QWidget):
         temp_layout.addWidget(tp_label,0,3)
         temp_layout.addWidget(QWidget(),0,4)
         
-        print("CUR_ORDERS INITIAL SIZE: "+str(self.curr_orders.count()))
+        # print("CUR_ORDERS INITIAL SIZE: "+str(self.curr_orders.count()))
         curr_orders = self.robinhood.getCurrStockOrders()
-        print(print("CUR ORDERS: "+str(curr_orders)))
+        # print(print("CUR ORDERS: "+str(curr_orders)))
         i=1
         # self.row_num 
         # self.curr_order_ticker = ""
@@ -344,7 +352,7 @@ class StockPositions(QWidget):
         self.curr_orders.setParent(None)
         self.curr_orders = temp_layout
         self.bot_layout.addLayout(self.curr_orders)
-        print("CUR_ORDERS END SIZE: "+str(self.curr_orders.count()))
+        # print("CUR_ORDERS END SIZE: "+str(self.curr_orders.count()))
         self.curr_orders.update()
 
     def soldPosition(self, soldInfo):

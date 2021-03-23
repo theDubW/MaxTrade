@@ -4,6 +4,7 @@ import pandas as pd
 import pickle
 
 from PySide2.QtCore import Signal, QObject
+from robin_stocks.urls import crypto_currency_pairs
 
 class Robinhood(QObject):
     sold_stock_signal = Signal(list,name="StockPositionSold")
@@ -15,10 +16,9 @@ class Robinhood(QObject):
         # creating pending order pickle file
         empty_dic = {}
         try:
-            pending = pickle.load(open("Pending_Orders.pkl", 'rb'))
-            print(pending)
+            pending = pickle.load(open("Pending_Stock_Orders.pkl", 'rb'))
         except (OSError, IOError) as e:
-            temp_pending = open("Pending_Orders.pkl", 'wb')
+            temp_pending = open("Pending_Stock_Orders.pkl", 'wb')
             pickle.dump(empty_dic, temp_pending)
             temp_pending.close()
         # creating stock sell pickle file
@@ -56,18 +56,18 @@ class Robinhood(QObject):
         return self.stock_positions[ticker]
     def sellStockPosition(self, ticker, quantity, stop_loss, take_profit):
         # Setting Stop Loss
-        print("Stop %:{}".format(stop_loss))
+        # print("Stop %:{}".format(stop_loss))
         stopPrice = round(float(self.getStockPosition(ticker)['average_buy_price'])*(1-stop_loss/100.0),2)
         out_order = r.orders.order(ticker,quantity,"limit",trigger="stop",side="sell",priceType=None,limitPrice=stopPrice,stopPrice=stopPrice,timeInForce="gtc",extendedHours=False)
         print(out_order)
         
         if('detail' in out_order and out_order['detail']=="Not enough shares to sell."):
             print("Previous order cancellation has not gone through yet, saving configuration for later.")
-            pending_infile = open("Pending_Orders.pkl", 'rb')
+            pending_infile = open("Pending_Stock_Orders.pkl", 'rb')
             curr_pending = pickle.load(pending_infile)
             pending_infile.close()
             curr_pending[ticker] = [ticker, quantity, stop_loss, take_profit]
-            pending_outfile = open("Pending_Orders.pkl", 'wb')
+            pending_outfile = open("Pending_Stock_Orders.pkl", 'wb')
             pickle.dump(curr_pending, pending_outfile)
             pending_outfile.close()
         else:
@@ -103,6 +103,8 @@ class Robinhood(QObject):
     # def soldPosition(orders, ticker):
     #     sig = Signal()
     #     sig.emit()
+    def getStockPrice(self, ticker):
+        return float(r.stocks.get_latest_price(ticker)[0])
     def getStockSoldInfo(self, orderId, ticker):
         if(orderId != "SAMPLE_TAKE_PROFIT_ID"):
             info = r.get_stock_order_info(orderId)
@@ -127,23 +129,33 @@ class Robinhood(QObject):
         return curr_orders
     #Return current pending orders
     def getPendingStockOrders(self):
-        infile = open("Pending_Orders.pkl", 'rb')
+        infile = open("Pending_Stock_Orders.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         return curr_orders
-    def updateStockHoldings(self):
+    #quicker update data function
+    def updateStockPrice(self):
+        cur_data = r.account.get_open_stock_positions()
+        for i in range(len(cur_data)):
+            ticker = r.stocks.get_instrument_by_url(cur_data[i]['instrument'])['symbol']
+            cur_price = float(r.stocks.get_latest_price(ticker)[0])
+            self.stock_positions[ticker]['equity'] = str(round(cur_price*float(cur_data[i]['quantity']),2))
+            self.stock_positions[ticker]['quantity'] = cur_data[0]['quantity']
+            self.stock_positions[ticker]['price'] = str(cur_price)
+
+    def updateAllStockData(self):
         self.stock_positions = r.account.build_holdings()
-    def updateStocks(self):
-        self.updateStockHoldings()
+    def updateBot(self):
         orders = self.getCurrStockOrders()
         for order in orders:
             # print("ORDER ID: {}".format(orders[order]['id']))
+            order_price = self.getStockPrice(order)
             if(self.checkStockSold(orders[order]['id'])):
                 info = self.getStockSoldInfo(orders[order]['id'], order)
                 print("SOLD {} POSITION FOR {}".format(order, info['sell_price']))
                 self.sold_stock_signal.emit([info['quantity'], order, info['sell_price'], round((info['sell_price']/orders[order]['bought_price']-1)*100, 2)])
                 self.deleteStockOrder(order)
-            elif float(self.getStockPosition(order)['price']) >= orders[order]['take_profit'] and self.hasCanceledStopLimit==0:
+            elif order_price >= orders[order]['take_profit'] and self.hasCanceledStopLimit==0:
                 print("Canceling stop limit order")
                 self.cancelAllStockOrders(order)
                 print("Selling at market price")
@@ -160,7 +172,7 @@ class Robinhood(QObject):
                 outfile = open("Sell_Stock_Positions.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
-            elif float(self.getStockPosition(order)['price']) < orders[order]['take_profit'] and self.hasCanceledStopLimit==1:
+            elif order_price < orders[order]['take_profit'] and self.hasCanceledStopLimit==1:
                 print("Canceling market order, price dipped again")
                 self.cancelAllStockOrders(order)
                 print("Creating stop limit order")
@@ -182,13 +194,18 @@ class Robinhood(QObject):
             print("Trying pending order again...")
             for ticker in pendingOrders:
                 self.sellStockPosition(pendingOrders[ticker][0],pendingOrders[ticker][1],pendingOrders[ticker][2],pendingOrders[ticker][3])
-                infile = open("Pending_Orders.pkl", 'rb')
+                infile = open("Pending_Stock_Orders.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 curr_orders.pop(ticker)
                 infile.close()
-                outfile = open("Pending_Orders.pkl",'wb')
+                outfile = open("Pending_Stock_Orders.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
+    def updateStocks(self):
+        print("UPDATE CALLED")
+        self.updateStockPrice()
+        
+        print("END UPDATE")
 
 
 
