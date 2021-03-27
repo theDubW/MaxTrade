@@ -9,14 +9,15 @@ class OptionPositionsTable(QAbstractTableModel):
         QAbstractTableModel.__init__(self)
         self.load_data(positions)
     def load_data(self, data):
-        self.tickers = data.index
+        self.tickers = data['Ticker']
         self.strike_price = data['Strike Price']
         self.type = data['Type']
         self.exp_date = data['Expiration Date']
         self.quantity = data['Quantity']
         self.mark_price = data['Market Price']
+        self.profit = data['Profit']
         self.percent_change = data['Percent Change']
-        self.column_count = 7
+        self.column_count = 8
         self.row_count = len(data.index)
     def rowCount(self, parent=QModelIndex()):
         return self.row_count
@@ -26,7 +27,7 @@ class OptionPositionsTable(QAbstractTableModel):
         if(role!=Qt.DisplayRole):
             return None
         if orientation==Qt.Horizontal:
-            return ("Ticker","Strike Price","Type","Expiration Date", "Quantity", "Market Price", "Percent Change")[section]
+            return ("Ticker","Strike Price","Type","Expiration Date", "Quantity", "Market Price", "Profit", "Percent Change")[section]
         else:
             return "{}".format(section)
     def data(self, index, role=Qt.DisplayRole):
@@ -48,6 +49,8 @@ class OptionPositionsTable(QAbstractTableModel):
             elif column==5:
                 return "{:0.2f}".format(self.mark_price[row])
             elif column==6:
+                return "{:0.2f}".format(self.profit[row])
+            elif column==7:
                 return "{:0.2f}".format(self.percent_change[row])
         elif role==Qt.BackgroundRole:
             return QColor(Qt.white)
@@ -71,6 +74,8 @@ class OptionPositionsTable(QAbstractTableModel):
             elif column==5:
                 self.mark_price[row] = value
             elif column==6:
+                self.profit[row] = value
+            elif column==7:
                 self.percent_change[row] = value
             return True
         return QAbstractTableModel.setData(self, index, value, role)
@@ -96,8 +101,11 @@ class OptionPositionsTable(QAbstractTableModel):
         for i in range(len(self.mark_price)):
             n =  QAbstractItemModel.createIndex(self, i, 5, None)
             self.setData(n, self.mark_price[i])
-        for i in range(len(self.percent_change)):
+        for i in range(len(self.profit)):
             n =  QAbstractItemModel.createIndex(self, i, 6, None)
+            self.setData(n, self.profit[i])
+        for i in range(len(self.percent_change)):
+            n =  QAbstractItemModel.createIndex(self, i, 7, None)
             self.setData(n, self.percent_change[i])
 class OutputBox(QScrollArea):
     def __init__(self):
@@ -118,7 +126,9 @@ class OptionPositions(QWidget):
         QWidget.__init__(self)
         self.robinhood = o.OptionsBot()
         self.robinhood.updateOptionPositions()
-        self.positions = OptionPositionsTable(self.robinhood.getOptionPositions())
+        curPositions = self.robinhood.getOptionPositions()
+        print(curPositions)
+        self.positions = OptionPositionsTable(curPositions)
         self.table_view = QTableView()
         self.table_view.setModel(self.positions)
         self.table_view.verticalHeader().setVisible(False)
@@ -164,8 +174,8 @@ class OptionPositions(QWidget):
         self.position_editing = QComboBox()
         # self.position_editing.setGeometry(50, 70, 100, 75)
         if(len(self.positions.quantity)>0):
-            for i in self.positions.tickers:
-                self.position_editing.addItem(i)
+            for i in range(len(self.positions.tickers)):
+                self.position_editing.addItem(str(self.positions.tickers[i])+" "+str(self.positions.strike_price[i])+" "+str(self.positions.type[i])+" "+str(self.positions.exp_date[i]))
         else:
             self.quantity.addItem("0")
         self.position_editing.currentIndexChanged.connect(self.changeQuantity)
@@ -200,7 +210,7 @@ class OptionPositions(QWidget):
         self.form_widget = QWidget()
         # self.form_layout = QVBoxLayout()
         self.form_layout = QFormLayout()
-        self.form_layout.addRow(QLabel("Ticker"),self.position_editing)
+        self.form_layout.addRow(QLabel("Contract"),self.position_editing)
         self.form_layout.addRow(QLabel("Quantity"),self.quantity)
         self.form_layout.addRow(QLabel("Stop Loss %"),self.stop_loss)
         self.form_layout.addRow(QLabel("Take Profit %"),self.take_profit)
@@ -341,6 +351,7 @@ class OptionPositions(QWidget):
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentText(),self.stop_loss.text(), self.take_profit.text()))
         # self.position_editing.currentItem().text()
-        self.robinhood.sellOptionPosition(self.position_editing.currentText(), int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
+        #TODO Fix selling for options
+        # self.robinhood.sellOptionPosition(self.position_editing.currentText()[0:self.position_editing.currentText().find(" ")], int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         # self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)

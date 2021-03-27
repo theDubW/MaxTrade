@@ -49,8 +49,8 @@ class Robinhood(QObject):
     def getStockHoldings(self):
         positions = {}
         for stock in self.stock_positions:
-            positions[stock] = {"Quantity":float(self.stock_positions[stock]['quantity']), "Equity":float(self.stock_positions[stock]['equity']), "Percent Change":float(self.stock_positions[stock]['percent_change'])}
-        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Quantity","Equity","Percent Change"])
+            positions[stock] = {"Quantity":float(self.stock_positions[stock]['quantity']), "Equity":float(self.stock_positions[stock]['equity']), "Profit": round((float(self.stock_positions[stock]['price'])-float(self.stock_positions[stock]['average_buy_price']))*float(self.stock_positions[stock]['quantity']),2),"Percent Change":float(self.stock_positions[stock]['percent_change'])}
+        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Quantity","Equity","Profit","Percent Change"])
         return pos_to_pd
     def getStockPosition(self, ticker):
         return self.stock_positions[ticker]
@@ -140,7 +140,7 @@ class Robinhood(QObject):
             ticker = r.stocks.get_instrument_by_url(cur_data[i]['instrument'])['symbol']
             cur_price = float(r.stocks.get_latest_price(ticker)[0])
             self.stock_positions[ticker]['equity'] = str(round(cur_price*float(cur_data[i]['quantity']),2))
-            self.stock_positions[ticker]['quantity'] = cur_data[0]['quantity']
+            self.stock_positions[ticker]['quantity'] = cur_data[i]['quantity']
             self.stock_positions[ticker]['price'] = str(cur_price)
 
     def updateAllStockData(self):

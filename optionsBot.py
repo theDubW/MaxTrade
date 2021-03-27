@@ -29,14 +29,26 @@ class OptionsBot(QObject):
     
     def getOptionPositions(self):
         positions = {}
+        i=0
         for option in self.option_positions:
             info = self.getOptionInfo(option)
             instr = self.getInstrData(option)
-            positions[option['chain_symbol']] = {"Strike Price":float(instr['strike_price']), "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":float(option['quantity']),"Market Price":float(info['adjusted_mark_price']),"Percent Change":self.optionPercentChange(option, info)}
-        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Strike Price","Type","Expiration Date","Quantity","Market Price", "Percent Change"])
+            pct_change = self.optionPercentChange(option, info)
+            positions[i] = {"Ticker":option['chain_symbol'],"Strike Price":float(instr['strike_price']), "Type":option['type']+" "+instr['type'],"Expiration Date":instr['expiration_date'],"Quantity":float(option['quantity']),"Market Price":float(info['adjusted_mark_price']),"Profit":self.getOptionProfit(option,info),"Percent Change":pct_change}
+            i+=1
+        pos_to_pd = pd.DataFrame.from_dict(positions, orient='index', columns=["Ticker","Strike Price","Type","Expiration Date","Quantity","Market Price", "Profit","Percent Change"])
         return pos_to_pd
+    def getOptionProfit(self, option, info):
+        if(option['type']=="short"):
+            return (abs(float(option['average_price']))-float(info['adjusted_mark_price'])*float(option['trade_value_multiplier']))*float(option['quantity'])
+        else:
+            return (float(info['adjusted_mark_price'])*float(option['trade_value_multiplier'])-float(option['average_price']))*float(option['quantity'])
     def optionPercentChange(self, option, info):
-        return round((float(info['adjusted_mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
+        if(option['type']=="short"):
+            return round((float(info['adjusted_mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])+1.0)*100.0,2)
+        else:
+            return round((float(info['adjusted_mark_price'])*float(option['trade_value_multiplier'])/float(option['average_price'])-1.0)*100.0,2)
+        
     def getOptionInfo(self, option):
         # inst = option['option']
         # inst=inst[:len(inst)-1]
@@ -130,6 +142,8 @@ class OptionsBot(QObject):
         return curr_orders
     def updateOptionPositions(self):
         self.option_positions = r.options.get_open_option_positions()
+        # print(self.option_positions)
+        # self.option_positions = r.options.get_aggregate_positions()
     def updateOptions(self):
         self.updateOptionPositions()
         orders = self.getCurrOptionOrders()

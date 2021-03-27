@@ -12,8 +12,9 @@ class StockPositionsTable(QAbstractTableModel):
         self.tickers = data.index
         self.quantity = data['Quantity']
         self.equity = data['Equity']
+        self.profit = data['Profit']
         self.pct_change = data['Percent Change']
-        self.column_count = 4
+        self.column_count = 5
         self.row_count = len(data.index)
     def rowCount(self, parent=QModelIndex()):
         return self.row_count
@@ -23,7 +24,7 @@ class StockPositionsTable(QAbstractTableModel):
         if(role!=Qt.DisplayRole):
             return None
         if orientation==Qt.Horizontal:
-            return ("Ticker","Quantity","Equity","Percent Change")[section]
+            return ("Ticker","Quantity","Equity","Profit","Percent Change")[section]
         else:
             return "{}".format(section)
     def data(self, index, role=Qt.DisplayRole):
@@ -39,6 +40,8 @@ class StockPositionsTable(QAbstractTableModel):
             elif column==2:
                 return "{:0.2f}".format(self.equity[row])
             elif column==3:
+                return "{:0.2f}".format(self.profit[row])
+            elif column==4:
                 return "{:0.2f}".format(self.pct_change[row])
         elif role==Qt.BackgroundRole:
             return QColor(Qt.white)
@@ -57,6 +60,8 @@ class StockPositionsTable(QAbstractTableModel):
                 self.equity[row] = value
             elif column==3:
                 self.pct_change[row] = value
+            elif column==4:
+                self.profit[row] = value
             return True
         return QAbstractTableModel.setData(self, index, value, role)
     def flags(self, index):
@@ -72,8 +77,11 @@ class StockPositionsTable(QAbstractTableModel):
         for i in range(len(self.equity)):
             n =  QAbstractItemModel.createIndex(self, i, 2, None)
             self.setData(n, self.equity[i])
-        for i in range(len(self.pct_change)):
+        for i in range(len(self.profit)):
             n =  QAbstractItemModel.createIndex(self, i, 3, None)
+            self.setData(n, self.profit[i])
+        for i in range(len(self.pct_change)):
+            n =  QAbstractItemModel.createIndex(self, i, 4, None)
             self.setData(n, self.pct_change[i])
 
 # class PositionSet(QDialog):
@@ -120,16 +128,20 @@ class StockPositions(QWidget):
         self.table_view.verticalHeader().setVisible(False)
         # self.table_view.adjustSize()
 
+        self.horizontal_header = self.table_view.horizontalHeader()
+        self.vertical_header = self.table_view.verticalHeader()
+
+        self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table_view.resizeColumnsToContents()
+
         width = 3
         for i in range(self.positions.columnCount()):
             width = width+self.table_view.columnWidth(i)
         print("STOCK WIDTH: "+str(width))
-        self.table_view.setMaximumWidth(width)
-        self.horizontal_header = self.table_view.horizontalHeader()
-        self.vertical_header = self.table_view.verticalHeader()
-        self.horizontal_header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.horizontal_header.setStretchLastSection(True)
+        self.table_view.setMinimumWidth(width)
+
+        # self.horizontal_header.setStretchLastSection(True)
         # self.vertical_header.setSectionResizeMode(QHeaderView.ResizeToContents)
         # self.table_view.setMaximumWidth(500)
         self.table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
