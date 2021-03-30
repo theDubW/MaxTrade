@@ -11,10 +11,64 @@ import getpass
 import os
 import keyring as k
 import sys
-#Verification Code
-class vCode(QDialog):
+#MFA Verification Code
+class MFACode(QDialog):
     def __init__(self, data, url, payload, sess_data, parent=None):
-        super(vCode, self).__init__(parent)
+        super(MFACode, self).__init__(parent)
+        self.code = QLineEdit(self)
+        self.code.setPlaceholderText("MFA Verification Code")
+        self.buttonConfirm = QPushButton('Confirm', self)
+        self.buttonConfirm.clicked.connect(self.handleCode)
+
+        self.setWindowTitle("MaxTrade MFA Verification")
+        self.setWindowIcon(QIcon(QPixmap(":/Icons/logo.png")))
+
+        #Data ported from newLogin method
+        self.url = url
+        self.data = data
+        self.payload = payload
+        self.sess_data = sess_data
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.code)
+        layout.addWidget(self.buttonConfirm)
+    def handleCode(self):
+        mfa_token = self.code.text()
+        self.payload['mfa_code'] = mfa_token
+        res = helper.request_post(self.url, self.payload, jsonify_data=False)
+        if (res.status_code != 200):
+            QMessageBox.warning(self, 'Error', 'Incorrect MFA Verfication Number. Try again.')
+            return False
+            # mfa_token = input(
+            #     "That MFA code was not correct. Please type in another MFA code: ")
+            # self.payload['mfa_code'] = mfa_token
+            # res = helper.request_post(self.url, self.payload, jsonify_data=False)
+        self.data = res.json()
+        # auth.respond_to_challenge(urls.challenge_url)
+        self.endLogin(self.data, self.sess_data[0],self.sess_data[1],self.sess_data[2])
+        return True
+    def endLogin(self, data, store_session, pickle_path, device_token):
+        # Update Session data with authorization or raise exception with the information present in data.
+        if 'access_token' in data:
+            token = '{0} {1}'.format(data['token_type'], data['access_token'])
+            helper.update_session('Authorization', token)
+            helper.set_login_state(True)
+            data['detail'] = "logged in with brand new authentication code."
+            if store_session:
+                with open(pickle_path, 'wb') as f:
+                    pickle.dump({'token_type': data['token_type'],
+                                'access_token': data['access_token'],
+                                'refresh_token': data['refresh_token'],
+                                'device_token': device_token}, f)
+            self.accept()
+        else:
+            QMessageBox.warning(self, 'Error', 'Incorrect MFA Verfication Number')
+            raise Exception(data['detail'])
+        return(data)
+#SMS Verification Code
+class SMSCode(QDialog):
+    def __init__(self, data, url, payload, sess_data, parent=None):
+        super(SMSCode, self).__init__(parent)
         self.code = QLineEdit(self)
         self.code.setPlaceholderText("SMS Verification Code")
         self.buttonConfirm = QPushButton('Confirm', self)
@@ -110,7 +164,7 @@ class Login(QDialog):
         #     QMessageBox.warning(
         #         self, 'Error', 'Incorrect username or password')
         # else:
-        #     authCode = vCode()
+        #     authCode = SMSCode()
         #     if(authCode.exec_() == QDialog.Accepted):
         #         self.accept()
 
@@ -238,18 +292,13 @@ class Login(QDialog):
         # Handle case where mfa or challenge is required.
         if data:
             if 'mfa_required' in data:
-                mfa_token = input("Please type in the MFA code: ")
-                payload['mfa_code'] = mfa_token
-                res = helper.request_post(url, payload, jsonify_data=False)
-                while (res.status_code != 200):
-                    mfa_token = input(
-                        "That MFA code was not correct. Please type in another MFA code: ")
-                    payload['mfa_code'] = mfa_token
-                    res = helper.request_post(url, payload, jsonify_data=False)
-                data = res.json()
+                print("MFA CHALLENGED, OPENING MFA-V-CODE TAB")
+                authCode = MFACode(data, url, payload, [store_session,pickle_path,device_token])
+                if(authCode.exec_() == QDialog.Accepted):
+                    self.accept()
             elif 'challenge' in data:
-                print("CHALLENGED, OPENING V-CODE TAB")
-                authCode = vCode(data, url, payload, [store_session,pickle_path,device_token])
+                print("SMS CHALLENGED, OPENING SMS-V-CODE TAB")
+                authCode = SMSCode(data, url, payload, [store_session,pickle_path,device_token])
                 if(authCode.exec_() == QDialog.Accepted):
                     self.accept()
             

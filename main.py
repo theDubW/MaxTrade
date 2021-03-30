@@ -19,7 +19,6 @@ if __name__ == '__main__':
     isLoggedIn = False
     # try:
     isLoggedIn = robinhood.login()
-    print("LOGGED IN")
     # except:
     #     print("FAILED TO LOGIN")
     app = QApplication(sys.argv)
