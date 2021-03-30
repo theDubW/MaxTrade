@@ -44,6 +44,10 @@ class Robinhood(QObject):
             a = r.authentication.check_logged_in(store_session = True)
             # print("Login token: "+a)
             return a
+    def logout(self):
+        r.authentication.logout()
+        r.authentication.deleteSavedPW()
+        # r.authentication.login(store_session=False)
 
     def getStockHoldings(self):
         positions = {}
