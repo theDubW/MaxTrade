@@ -17,12 +17,11 @@ import robinhoodBot as r
 if __name__ == '__main__':
     robinhood = r.Robinhood()
     isLoggedIn = False
-    try:
-        isLoggedIn = robinhood.login()
-        print("LOGGED IN")
-    except:
-        isLoggedIn = False
-        print("FAILED TO LOGIN")
+    # try:
+    isLoggedIn = robinhood.login()
+    print("LOGGED IN")
+    # except:
+    #     print("FAILED TO LOGIN")
     app = QApplication(sys.argv)
     if(isLoggedIn == False):
         login = l.Login()

@@ -127,7 +127,7 @@ class OptionPositions(QWidget):
         self.robinhood = o.OptionsBot()
         self.robinhood.updateOptionPositions()
         curPositions = self.robinhood.getOptionPositions()
-        print(curPositions)
+        # print(curPositions)
         self.positions = OptionPositionsTable(curPositions)
         self.table_view = QTableView()
         self.table_view.setModel(self.positions)
@@ -141,7 +141,7 @@ class OptionPositions(QWidget):
         width = 3
         for i in range(self.positions.columnCount()):
             width = width+self.table_view.columnWidth(i)
-        print("OPTION WIDTH: "+str(width))
+        # print("OPTION WIDTH: "+str(width))
         self.table_view.setMinimumWidth(width)
         # self.table_view.setMaximumWidth(500)
         self.table_view.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -274,7 +274,7 @@ class OptionPositions(QWidget):
         if self.curr_orders.count()>0:
             for i in reversed(range(self.curr_orders.rowCount())):
                 for j in range(self.curr_orders.columnCount()):
-                    print("i:{}, j:{}".format(i,j))
+                    # print("i:{}, j:{}".format(i,j))
                     widgetToRemove = self.curr_orders.itemAtPosition(i,j).widget()
                     # remove it from the layout list
                     self.curr_orders.removeWidget(widgetToRemove)

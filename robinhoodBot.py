@@ -29,23 +29,22 @@ class Robinhood(QObject):
             temp_outfile = open("Sell_Stock_Positions.pkl","wb")
             pickle.dump(empty_dic, temp_outfile)
             temp_outfile.close()
+    #Login helper functions. Most are in login.py
     def getUserInfo(self):
         username = k.get_password("MaxTradeBot", "BotUserName")
         return {"username":username, "password":k.get_password("MaxTrade", username)}
-    #Sets stored username and password based on input
-    def setUsernamePW(self, username, password):
-        k.set_password("MaxTradeBot", "BotUserName", username)
-        k.set_password("MaxTrade", k.get_password("MaxTradeBot", "BotUserName"), password)
     def login(self):
+        print("ATTEMPTING LOGIN")
         if(k.get_password("MaxTradeBot", "BotUserName") == None):
-            # username = input("Robinhood Email/Username:")
-            # password = input("Robinhood Password:")
-            # a = r.authentication.login(username=getUserInfo()["username"],password=getUserInfo()["password"],by_sms=False, store_session = True)
+            print("can't find username or pw saved")
             return False
         else:
-            print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
-            a = r.authentication.login(username=self.getUserInfo()["username"],password=self.getUserInfo()["password"], store_session = True)
+            # print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
+            # a = self.login(username=self.getUserInfo()["username"],password=self.getUserInfo()["password"], store_session = True)
+            a = r.authentication.check_logged_in(store_session = True)
+            # print("Login token: "+a)
             return a
+
     def getStockHoldings(self):
         positions = {}
         for stock in self.stock_positions:

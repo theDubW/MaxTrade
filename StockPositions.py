@@ -138,7 +138,7 @@ class StockPositions(QWidget):
         width = 3
         for i in range(self.positions.columnCount()):
             width = width+self.table_view.columnWidth(i)
-        print("STOCK WIDTH: "+str(width))
+        # print("STOCK WIDTH: "+str(width))
         self.table_view.setMinimumWidth(width)
 
         # self.horizontal_header.setStretchLastSection(True)
