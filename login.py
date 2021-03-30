@@ -144,6 +144,7 @@ class Login(QDialog):
         self.textName.setPlaceholderText("Robinhood Username/Email")
         self.textPass = QLineEdit(self)
         self.textPass.setPlaceholderText("Robinhood Password")
+        self.textPass.setEchoMode(QLineEdit.Password)
         self.buttonLogin = QPushButton('Login', self)
         self.buttonLogin.clicked.connect(self.handleLogin)
         self.setWindowTitle("MaxTrade Login")
@@ -180,9 +181,9 @@ class Login(QDialog):
         if(k.get_password("MaxTradeBot", "BotUserName") == None):
             return False
         else:
-            print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
+            # print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
             a = self.newLogin(username=self.getUserInfo()["username"],password=self.getUserInfo()["password"], store_session = True)
-            print(a)
+            print("Login result: "+str(a))
             return a
     
 
@@ -222,12 +223,8 @@ class Login(QDialog):
         pickle_path = os.path.join(data_dir, creds_file)
         # Challenge type is used if not logging in with two-factor authentication.
         if by_sms:
-            #added by max
-            print("Challenge by SMS")
             challenge_type = "sms"
         else:
-            #added by max
-            print("Challenge by Email")
             challenge_type = "email"
 
         url = urls.login_url()
@@ -289,6 +286,7 @@ class Login(QDialog):
             payload['password'] = password
 
         data = helper.request_post(url, payload)
+        print("DATA: "+str(data))
         # Handle case where mfa or challenge is required.
         if data:
             if 'mfa_required' in data:
@@ -301,4 +299,5 @@ class Login(QDialog):
                 authCode = SMSCode(data, url, payload, [store_session,pickle_path,device_token])
                 if(authCode.exec_() == QDialog.Accepted):
                     self.accept()
-            
+            elif(data['detail']):
+                QMessageBox.warning(self, 'Error', 'Incorrect Username or Password. Try again')
