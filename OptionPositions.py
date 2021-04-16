@@ -17,6 +17,7 @@ class OptionPositionsTable(QAbstractTableModel):
         self.mark_price = data['Market Price']
         self.profit = data['Profit']
         self.percent_change = data['Percent Change']
+        self.option_id=data['id']
         self.column_count = 8
         self.row_count = len(data.index)
     def rowCount(self, parent=QModelIndex()):
@@ -206,6 +207,8 @@ class OptionPositions(QWidget):
         self.output_box.setText(self.output_text)
         self.output_box.setWidgetResizable(True)
         self.output_box.setFixedSize(200, 100)
+        #Add slot connection to output from options
+        self.robinhood.output[str].connect(self.addOutput)
 
         self.form_widget = QWidget()
         # self.form_layout = QVBoxLayout()
@@ -283,7 +286,7 @@ class OptionPositions(QWidget):
         self.curr_orders.update()
         temp_layout=QGridLayout()
         
-        t_label=QLabel("Ticker")
+        t_label=QLabel("Contract")
         order_font = QFont()
         order_font.setPointSize(10)
         t_label.setFont(order_font)
@@ -306,7 +309,8 @@ class OptionPositions(QWidget):
         # self.row_num 
         # self.curr_order_ticker = ""
         for order in curr_orders:
-            temp_layout.addWidget(QLabel(str(order)),i,0)
+            contract = curr_orders[order]["ticker"]+" "+curr_orders[order]["strike_price"]+" "+curr_orders[order]["full_type"]+" "+curr_orders[order]["expiration_date"]
+            temp_layout.addWidget(QLabel(str(contract)),i,0)
             temp_layout.addWidget(QLabel(str(curr_orders[order]["quantity"])),i,1)
             temp_layout.addWidget(QLabel(str(curr_orders[order]["sl_percent"])),i,2)
             temp_layout.addWidget(QLabel(str(curr_orders[order]["tp_percent"])),i,3)
@@ -347,11 +351,22 @@ class OptionPositions(QWidget):
         #     self.position_editing.takeItem(row)
     def orderCanceled(self, ticker):
         print("order canceled for {} option".format(ticker))
+        self.robinhood.cancelAllOptionOrders(ticker)
+        self.output_text+="Canceled sell order for "+self.robinhood.getTickerByID(ticker)+"\n\n"
+        self.robinhood.deleteOptionOrder(ticker)
+        self.output_box.setText(self.output_text)
+        self.updateOrders()
+    #add text to output box
+    def addOutput(self, text):
+        self.output_text+=text
+        self.output_box.setText(self.output_text)
         
     def updateOutput(self):
         self.output_text += ("{}:\nStop Loss set: {}%; Take Profit Set: {}%\n\n".format(self.position_editing.currentText(),self.stop_loss.text(), self.take_profit.text()))
         # self.position_editing.currentItem().text()
         #TODO Fix selling for options
-        # self.robinhood.sellOptionPosition(self.position_editing.currentText()[0:self.position_editing.currentText().find(" ")], int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
+        # self.robinhood.tempSell(self.position_editing.currentText()[0:self.position_editing.currentText().find(" ")], int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()), self.positions.option_id[self.position_editing.currentIndex()])
+        self.robinhood.sellOptionPosition(self.position_editing.currentText()[0:self.position_editing.currentText().find(" ")], int(self.quantity.currentText()), float(self.stop_loss.text()[1:]), float(self.take_profit.text()), self.positions.option_id[self.position_editing.currentIndex()])
         # self.robinhood.sellStockPosition(self.position_editing.currentItem().text(), 1, float(self.stop_loss.text()[1:]), float(self.take_profit.text()))
         self.output_box.setText(self.output_text)
+        self.updateOrders()

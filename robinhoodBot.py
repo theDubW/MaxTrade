@@ -205,10 +205,8 @@ class Robinhood(QObject):
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
     def updateStocks(self):
-        print("UPDATE CALLED")
         self.updateStockPrice()
-        
-        print("END UPDATE")
+
 
 
 
