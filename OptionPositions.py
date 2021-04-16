@@ -309,7 +309,7 @@ class OptionPositions(QWidget):
         # self.row_num 
         # self.curr_order_ticker = ""
         for order in curr_orders:
-            contract = curr_orders[order]["ticker"]+" "+curr_orders[order]["strike_price"]+" "+curr_orders[order]["full_type"]+" "+curr_orders[order]["expiration_date"]
+            contract = curr_orders[order]["ticker"]+" "+curr_orders[order]["strike_price"]+" "+curr_orders[order]["full_type"]+" "+curr_orders[order]['type']+" "+curr_orders[order]["expiration_date"]
             temp_layout.addWidget(QLabel(str(contract)),i,0)
             temp_layout.addWidget(QLabel(str(curr_orders[order]["quantity"])),i,1)
             temp_layout.addWidget(QLabel(str(curr_orders[order]["sl_percent"])),i,2)
@@ -358,7 +358,7 @@ class OptionPositions(QWidget):
         self.updateOrders()
     #add text to output box
     def addOutput(self, text):
-        self.output_text+=text
+        self.output_text+=text+"\n\n"
         self.output_box.setText(self.output_text)
         
     def updateOutput(self):

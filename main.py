@@ -2,6 +2,7 @@ import sys
 
 #QT imports
 from PySide2.QtWidgets import QApplication, QDockWidget, QDialog
+from PySide2.QtGui import QFont
 
 import login as l
 
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     # except:
     #     print("FAILED TO LOGIN")
     app = QApplication(sys.argv)
+    
     if(isLoggedIn == False):
         login = l.Login()
         if(login.exec_()==QDialog.Accepted):
@@ -38,5 +40,7 @@ if __name__ == '__main__':
         optionsWidget.startTimer()
         window = MainWindow(stockWidget, optionsWidget)
         window.show()
-
+    font = QFont("DM Sans")
+    font.setStyleHint(QFont.SansSerif)
+    app.setFont(font)
     sys.exit(app.exec_())

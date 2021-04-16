@@ -97,7 +97,7 @@ class OptionsBot(QObject):
         # TODO add support for short calls etc.
         out_order = {}
         order = {}
-        fullType = currOption["type"]+" "+instr_data['type']
+        fullType = currOption["type"]
         if(currOption['type']=="short"):
             print("SHORT SELL ORDER")
             stopPrice = round(float(currOption['average_price'])*(-1-stop_loss/100.0)/float(currOption['trade_value_multiplier']),2)
@@ -125,11 +125,11 @@ class OptionsBot(QObject):
                 out_order = r.orders.order_sell_option_stop_limit('close', 'credit', stopPrice, stopPrice, ticker, quantity, instr_data['expiration_date'], instr_data['strike_price'], optionType=instr_data['type'], timeInForce='gtc')
             if(out_order.get('detail')=="This order introduces infinite risk."):
                 print("ERROR: INFINITE RISK SELLING")
-                self.output.emit("ERROR: INFINITE RISK SELLING\n\n")
+                self.output.emit("ERROR: INFINITE RISK SELLING")
                 return
             elif(out_order.get('detail')=="This order is invalid because you do not have enough shares to close your position."):
                 print("ERROR: NOT ENOUGH CONTRACTS AVAILABLE")
-                self.output.emit("ERROR: NOT ENOUGH CONTRACTS AVAILABLE\n\n")
+                self.output.emit("ERROR: NOT ENOUGH CONTRACTS AVAILABLE")
                 return
         if(currOption['type']=="short"):
             #Switch take profit and stop loss for short positions
@@ -219,7 +219,7 @@ class OptionsBot(QObject):
             # print("Current Price: {}, Take profit price: {}".format(float(self.getOptionInfo(self.getOptionPosition(order))['adjusted_mark_price']), orders[order]['take_profit']))
             # print("Curr price: {}, take profit: {}, stop loss: {}".format(float(self.getOptionInfo(self.getOptionPosition(orders[order]['option_id']))['adjusted_mark_price']), orders[order]['take_profit'], orders[order]['stop_loss']))
             # isShort = True if self.getOptionPosition(order['option_id'])['type']=="short" else False
-            
+            isShort = True if orders[order]['full_type']=="short" else False
             if(self.checkOptionSold(orders[order]['id'])):
                 info = self.getOptionSoldInfo(orders[order]['id'], order)
                 print("SOLD {} CONTRACTS OF {} POSITION FOR A PROFIT OF {}".format(info['quantity'], order, info['profit']))
@@ -230,10 +230,22 @@ class OptionsBot(QObject):
             # elif  >= orders[order]['take_profit']:
             
             elif float(self.getOptionInfo(self.getOptionPosition(orders[order]['option_id']))['adjusted_mark_price']) >= orders[order]['take_profit'] and self.hasCanceledStopLimit == 0:
+                
+                if(isShort):
+                    self.output.emit("Placing stop limit order for option as stop loss price has been reached")
+                    print("Placing stop limit order for option as stop loss price has been reached")
+                else:
+                    self.output.emit("Placing sell order for option as take profit price has been reached")
+                    print("Placing sell order for option as take profit price has been reached")
                 print("Cancelling current option stop limit order")
                 self.cancelAllOptionOrders(order)
-                print("Placing sell order for option as take profit price has been reached")
-                # out_order = r.orders.order_sell_option_limit(positionEffect='close',creditOrDebit='credit',price=self.getOptionInfo(self.getOptionPosition(orders[order]['id']))['adjusted_mark_price'], symbol=order, quantity=orders[order]['quantity'], expirationDate=orders[order]['expiration_date'], strike=orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
+                out_order={}
+                if(isShort):
+                    #purposefully wrong-looking index take_profit and stop_loss switched
+                    out_order = r.orders.order_buy_option_stop_limit(positionEffect='close',creditOrDebit='debit',limitPrice=orders[order]['take_profit'], symbol=order, quantity=orders[order]['quantity'], expirationDate=orders[order]['expiration_date'], strike=orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
+                else:
+                    out_order = r.orders.order_sell_option_limit(positionEffect='close',creditOrDebit='credit',price=self.getOptionInfo(self.getOptionPosition(orders[order]['id']))['adjusted_mark_price'], symbol=order, quantity=orders[order]['quantity'], expirationDate=orders[order]['expiration_date'], strike=orders[order]['strike_price'], optionType=orders[order]['type'], timeInForce='gtc')
+
                 if(out_order.get("id") != None):
                     self.hasCanceledStopLimit = 1
                 else:

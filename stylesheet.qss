@@ -1,0 +1,26 @@
+QWidget{
+    font:"DM Sans"
+}
+QWidget#mainWidget:{
+    background-color:#e8faed;
+}
+QLineEdit{background-color:white}
+QPushButton{
+    background-color:#7ac968;
+    border-style: outset;
+    border-width: 2px;
+    border-radius: 10px;
+    border-color: beige;
+    font: bold 14px;
+    min-width: 10em;
+    padding: 6px;
+}
+QScrollBar{
+    background-color:white
+}
+QPushButton:pressed{
+    background-color:#4ca456
+}
+QPushButton:hover{
+    background-color:#5bb462
+}
