@@ -11,7 +11,8 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("MaxTrade")
         self.setWindowIcon(QIcon(QPixmap(":/Icons/logo.png")))
-        self.setWindowState(Qt.WindowMaximized)
+        # self.setWindowState(Qt.WindowMaximized)
+        self.resize(800, 800)
         # self.addDockWidget(Qt.TopRightSection, stock_info)
         # main
         main_widget = MainWidget(self, stock_info, option_info)
