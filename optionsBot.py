@@ -1,4 +1,5 @@
-import robin_stocks as r
+# import robin_stocks as r
+from robin_stocks import robinhood as r
 import pandas as pd
 import pickle
 

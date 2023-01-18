@@ -1,10 +1,11 @@
-import robin_stocks as r
+# import robin_stocks as r
+from robin_stocks import robinhood as r
 import keyring as k
 import pandas as pd
 import pickle
 
 from PySide2.QtCore import Signal, QObject
-from robin_stocks.urls import crypto_currency_pairs
+# from robin_stocks.urls import crypto_currency_pairs
 
 class Robinhood(QObject):
     sold_stock_signal = Signal(list,name="StockPositionSold")
@@ -41,7 +42,9 @@ class Robinhood(QObject):
         else:
             # print("Username stored:{}, Password Stored:{}".format(self.getUserInfo()["username"], self.getUserInfo()["password"]))
             # a = self.login(username=self.getUserInfo()["username"],password=self.getUserInfo()["password"], store_session = True)
-            a = r.authentication.check_logged_in(store_session = True)
+            # a = r.authentication.check_logged_in(store_session = True)
+            a = r.authentication.login(store_session = True)
+
             # print("Login token: "+a)
             return a
     def logout(self):
