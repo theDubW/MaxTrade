@@ -17,17 +17,17 @@ class Robinhood(QObject):
         # creating pending order pickle file
         empty_dic = {}
         try:
-            pending = pickle.load(open("Pending_Stock_Orders.pkl", 'rb'))
+            pending = pickle.load(open("Positions/Pending_Stock_Orders.pkl", 'rb'))
         except (OSError, IOError) as e:
-            temp_pending = open("Pending_Stock_Orders.pkl", 'wb')
+            temp_pending = open("Positions/Pending_Stock_Orders.pkl", 'wb')
             pickle.dump(empty_dic, temp_pending)
             temp_pending.close()
         # creating stock sell pickle file
         try:
-            stock_orders = pickle.load(open("Sell_Stock_Positions.pkl",'rb'))
+            stock_orders = pickle.load(open("Positions/Sell_Stock_Positions.pkl",'rb'))
             print(stock_orders)
         except (OSError, IOError) as e:
-            temp_outfile = open("Sell_Stock_Positions.pkl","wb")
+            temp_outfile = open("Positions/Sell_Stock_Positions.pkl","wb")
             pickle.dump(empty_dic, temp_outfile)
             temp_outfile.close()
     #Login helper functions. Most are in login.py
@@ -69,21 +69,21 @@ class Robinhood(QObject):
         
         if('detail' in out_order and out_order['detail']=="Not enough shares to sell."):
             print("Previous order cancellation has not gone through yet, saving configuration for later.")
-            pending_infile = open("Pending_Stock_Orders.pkl", 'rb')
+            pending_infile = open("Positions/Pending_Stock_Orders.pkl", 'rb')
             curr_pending = pickle.load(pending_infile)
             pending_infile.close()
             curr_pending[ticker] = [ticker, quantity, stop_loss, take_profit]
-            pending_outfile = open("Pending_Stock_Orders.pkl", 'wb')
+            pending_outfile = open("Positions/Pending_Stock_Orders.pkl", 'wb')
             pickle.dump(curr_pending, pending_outfile)
             pending_outfile.close()
         else:
             # out_order = {'id':'SAMPLE_SELL_ID'}
             order = {'bought_price':float(self.getStockPosition(ticker)['average_buy_price']), 'take_profit':round(float(self.getStockPosition(ticker)['average_buy_price'])*(1+take_profit/100.0),1), 'stop_loss':stopPrice, "tp_percent":take_profit,"sl_percent":stop_loss, 'quantity':quantity, "id":out_order['id']}
-            infile = open("Sell_Stock_Positions.pkl", 'rb')
+            infile = open("Positions/Sell_Stock_Positions.pkl", 'rb')
             curr_orders = pickle.load(infile)
             infile.close()
             curr_orders[ticker] = order
-            outfile = open("Sell_Stock_Positions.pkl",'wb')
+            outfile = open("Positions/Sell_Stock_Positions.pkl",'wb')
             pickle.dump(curr_orders, outfile)
             outfile.close()
         
@@ -120,22 +120,22 @@ class Robinhood(QObject):
         return {'quantity':float(info['cumulative_quantity']), 'sell_price':float(info['average_price'])}
     #Deletes order from pickle file
     def deleteStockOrder(self, ticker):
-        infile = open("Sell_Stock_Positions.pkl", 'rb')
+        infile = open("Positions/Sell_Stock_Positions.pkl", 'rb')
         curr_orders = pickle.load(infile)
         curr_orders.pop(ticker)
         infile.close()
-        outfile = open("Sell_Stock_Positions.pkl",'wb')
+        outfile = open("Positions/Sell_Stock_Positions.pkl",'wb')
         pickle.dump(curr_orders, outfile)
         outfile.close()
     #Return current orders dictionary
     def getCurrStockOrders(self):
-        infile = open("Sell_Stock_Positions.pkl", 'rb')
+        infile = open("Positions/Sell_Stock_Positions.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         return curr_orders
     #Return current pending orders
     def getPendingStockOrders(self):
-        infile = open("Pending_Stock_Orders.pkl", 'rb')
+        infile = open("Positions/Pending_Stock_Orders.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         return curr_orders
@@ -171,11 +171,11 @@ class Robinhood(QObject):
                 else:
                     continue
                 # out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
-                infile = open("Sell_Stock_Positions.pkl", 'rb')
+                infile = open("Positions/Sell_Stock_Positions.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 infile.close()
                 curr_orders[order]['id'] = out_order['id'] 
-                outfile = open("Sell_Stock_Positions.pkl",'wb')
+                outfile = open("Positions/Sell_Stock_Positions.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
             elif order_price < orders[order]['take_profit'] and self.hasCanceledStopLimit==1:
@@ -188,11 +188,11 @@ class Robinhood(QObject):
                 else:
                     continue
                 # out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
-                infile = open("Sell_Stock_Positions.pkl", 'rb')
+                infile = open("Positions/Sell_Stock_Positions.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 infile.close()
                 curr_orders[order]['id'] = out_order['id'] 
-                outfile = open("Sell_Stock_Positions.pkl",'wb')
+                outfile = open("Positions/Sell_Stock_Positions.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
         pendingOrders = self.getPendingStockOrders()
@@ -200,11 +200,11 @@ class Robinhood(QObject):
             print("Trying pending order again...")
             for ticker in pendingOrders:
                 self.sellStockPosition(pendingOrders[ticker][0],pendingOrders[ticker][1],pendingOrders[ticker][2],pendingOrders[ticker][3])
-                infile = open("Pending_Stock_Orders.pkl", 'rb')
+                infile = open("Positions/Pending_Stock_Orders.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 curr_orders.pop(ticker)
                 infile.close()
-                outfile = open("Pending_Stock_Orders.pkl",'wb')
+                outfile = open("Positions/Pending_Stock_Orders.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
     def updateStocks(self):

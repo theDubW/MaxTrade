@@ -16,17 +16,17 @@ class OptionsBot(QObject):
         empty_dic = {}
         
         try:
-            pending = pickle.load(open("Pending_Option_Orders.pkl", 'rb'))
+            pending = pickle.load(open("Positions/Pending_Option_Orders.pkl", 'rb'))
         except (OSError, IOError) as e:
-            temp_pending = open("Pending_Option_Orders.pkl", 'wb')
+            temp_pending = open("Positions/Pending_Option_Orders.pkl", 'wb')
             pickle.dump(empty_dic, temp_pending)
             temp_pending.close()
         # creating option sell pickle file
         try:
-            stock_orders = pickle.load(open("Sell_Option_Positions.pkl",'rb'))
+            stock_orders = pickle.load(open("Positions/Sell_Option_Positions.pkl",'rb'))
             print(stock_orders)
         except (OSError, IOError) as e:
-            temp_outfile = open("Sell_Option_Positions.pkl","wb")
+            temp_outfile = open("Positions/Sell_Option_Positions.pkl","wb")
             pickle.dump(empty_dic, temp_outfile)
             temp_outfile.close()
     
@@ -138,11 +138,11 @@ class OptionsBot(QObject):
         else:
             order = {'ticker':ticker, 'bought_price':float(currOption['average_price']), 'take_profit':takeProfit, 'stop_loss':stopPrice, 'tp_percent':take_profit, 'sl_percent':stop_loss, 'quantity': quantity, 'expiration_date':instr_data['expiration_date'], 'strike_price':instr_data['strike_price'], 'type':instr_data['type'], 'full_type':fullType, 'id':out_order['id'], 'option_id':id}
 
-        infile = open("Sell_Option_Positions.pkl", 'rb')
+        infile = open("Positions/Sell_Option_Positions.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         curr_orders[order['option_id']] = order
-        outfile = open("Sell_Option_Positions.pkl",'wb')
+        outfile = open("Positions/Sell_Option_Positions.pkl",'wb')
         pickle.dump(curr_orders, outfile)
         outfile.close()
     #Cancels all option orders for a given ticker
@@ -183,16 +183,16 @@ class OptionsBot(QObject):
         return {'quantity':float(info['processed_quantity']), 'sell_price':float(info['premium']), 'profit':round(float(info['processed_premium'])-orders['bought_price']*orders['quantity'], 2)}
     #Deletes order from pickle file
     def deleteOptionOrder(self, ticker):
-        infile = open("Sell_Option_Positions.pkl", 'rb')
+        infile = open("Positions/Sell_Option_Positions.pkl", 'rb')
         curr_orders = pickle.load(infile)
         curr_orders.pop(ticker)
         infile.close()
-        outfile = open("Sell_Option_Positions.pkl",'wb')
+        outfile = open("Positions/Sell_Option_Positions.pkl",'wb')
         pickle.dump(curr_orders, outfile)
         outfile.close()
     #Return current pending orders
     def getPendingOptionOrders(self):
-        infile = open("Pending_Option_Orders.pkl", 'rb')
+        infile = open("Positions/Pending_Option_Orders.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         return curr_orders
@@ -204,7 +204,7 @@ class OptionsBot(QObject):
                 return currOrders[order]['ticker']
         return "-1"
     def getCurrOptionOrders(self):
-        infile = open("Sell_Option_Positions.pkl", 'rb')
+        infile = open("Positions/Sell_Option_Positions.pkl", 'rb')
         curr_orders = pickle.load(infile)
         infile.close()
         return curr_orders
@@ -254,12 +254,12 @@ class OptionsBot(QObject):
                 print(out_order)
                 # out_order = {'id':"SAMPLE_TAKE_PROFIT_ID"}
                 #Changing the order id in pickle file
-                infile = open("Sell_Option_Positions.pkl", 'rb')
+                infile = open("Positions/Sell_Option_Positions.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 infile.close()
                 print(curr_orders[order])
                 curr_orders[order]['id'] = out_order['id'] 
-                outfile = open("Sell_Option_Positions.pkl",'wb')
+                outfile = open("Positions/Sell_Option_Positions.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
             #If I've placed sell take profit order, but price drops below again
@@ -273,12 +273,12 @@ class OptionsBot(QObject):
                     self.hasCanceledStopLimit=0
                 else:
                     continue
-                infile = open("Sell_Option_Positions.pkl", 'rb')
+                infile = open("Positions/Sell_Option_Positions.pkl", 'rb')
                 curr_orders = pickle.load(infile)
                 infile.close()
                 print(curr_orders[order])
                 curr_orders[order]['id'] = out_order['id'] 
-                outfile = open("Sell_Option_Positions.pkl",'wb')
+                outfile = open("Positions/Sell_Option_Positions.pkl",'wb')
                 pickle.dump(curr_orders, outfile)
                 outfile.close()
             pendingOrders = self.getPendingOptionOrders()
@@ -286,10 +286,10 @@ class OptionsBot(QObject):
                 print("Trying pending order again...")
                 for ticker in pendingOrders:
                     self.sellOptionPosition(pendingOrders[ticker][0],pendingOrders[ticker][1],pendingOrders[ticker][2],pendingOrders[ticker][3])
-                    infile = open("Pending_Option_Orders.pkl", 'rb')
+                    infile = open("Positions/Pending_Option_Orders.pkl", 'rb')
                     curr_orders = pickle.load(infile)
                     curr_orders.pop(ticker)
                     infile.close()
-                    outfile = open("Pending_Option_Orders.pkl",'wb')
+                    outfile = open("Positions/Pending_Option_Orders.pkl",'wb')
                     pickle.dump(curr_orders, outfile)
                     outfile.close()
