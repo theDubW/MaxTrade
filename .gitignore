@@ -3,5 +3,5 @@ build
 dist
 __pycache__
 .vscode
-Positions
 Widgets/__pycache__
+.DS_Store
