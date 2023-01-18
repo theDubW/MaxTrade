@@ -10,4 +10,4 @@ For the trading bot, you can set stop loss or take profit percentages for both y
 4. You're done! All you need to do now is run main.py, which you can do simply by running `python main.py` in your terminal, or if you would prefer, double click on run.bat (Windows) or run.sh (Mac/Linux)
 5. A new window with a login should open up on your first run, and the following times you should remain logged in and the main window will open automatically.
 
-Disclaimer: I make no claims of responisibility if something goes wrong. Please treat this as an experimental tool, but it's open source, so feel free to build on it.  
+Disclaimer: I make no claims of responsibility if something goes wrong. Please treat this as an experimental tool, but it's open source, so feel free to build on it.  
