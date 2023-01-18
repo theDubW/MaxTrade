@@ -36,6 +36,7 @@ class MFACode(QDialog):
         mfa_token = self.code.text()
         self.payload['mfa_code'] = mfa_token
         res = helper.request_post(self.url, self.payload, jsonify_data=False)
+        print("MFA RES: "+str(res.json()))
         if (res.status_code != 200):
             QMessageBox.warning(self, 'Error', 'Incorrect MFA Verfication Number. Try again.')
             return False
@@ -50,6 +51,7 @@ class MFACode(QDialog):
     def endLogin(self, data, store_session, pickle_path, device_token):
         # Update Session data with authorization or raise exception with the information present in data.
         if 'access_token' in data:
+            print("Logging in!!")
             token = '{0} {1}'.format(data['token_type'], data['access_token'])
             helper.update_session('Authorization', token)
             helper.set_login_state(True)
@@ -229,6 +231,7 @@ class Login(QDialog):
 
         url = urls.login_url()
         payload = {
+            #This ID is from robin_stocks, not specific to user
             'client_id': 'c82SH0WZOsabOXGP2sxqcj34FxkvfnWRZBKlBjFS',
             'expires_in': expiresIn,
             'grant_type': 'password',
@@ -292,6 +295,7 @@ class Login(QDialog):
             if 'mfa_required' in data:
                 print("MFA CHALLENGED, OPENING MFA-V-CODE TAB")
                 authCode = MFACode(data, url, payload, [store_session,pickle_path,device_token])
+                # print("MFA CODE: "+authCode)
                 if(authCode.exec_() == QDialog.Accepted):
                     self.accept()
             elif 'challenge' in data:
