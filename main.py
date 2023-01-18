@@ -4,15 +4,15 @@ import sys
 from PySide2.QtWidgets import QApplication, QDockWidget, QDialog, QMainWindow
 from PySide2.QtGui import QFont
 
-import login as l
+import Widgets.login as l
 
 #Custom Widgets
-from StockPositions import StockPositions
-from OptionPositions import OptionPositions
-from MainWindow import MainWindow
+from Widgets.StockPositions import StockPositions
+from Widgets.OptionPositions import OptionPositions
+from Widgets.MainWindow import MainWindow
 
 #Helper Module
-import robinhoodBot as r
+import TradingBots.robinhoodBot as r
 
 if __name__ == '__main__':
     robinhood = r.Robinhood()

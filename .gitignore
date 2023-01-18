@@ -4,3 +4,4 @@ dist
 __pycache__
 .vscode
 Positions
+Widgets/__pycache__

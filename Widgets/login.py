@@ -2,7 +2,7 @@ from PySide2.QtCore import QCoreApplication
 from PySide2.QtWidgets import QLineEdit, QPushButton, QVBoxLayout, QDialog, QMessageBox, QMainWindow, QApplication
 from PySide2.QtGui import QIcon, QPixmap
 # from mainwindow import Ui_MainWindow
-import robinhoodBot as r
+import TradingBots.robinhoodBot as r
 import robin_stocks.helper as helper
 import robin_stocks.authentication as auth
 import robin_stocks.urls as urls

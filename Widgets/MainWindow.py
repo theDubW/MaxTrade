@@ -1,8 +1,8 @@
 from PySide2.QtCore import QUrl, Qt
 from PySide2.QtGui import QIcon, QKeySequence, QPixmap
 from PySide2.QtWidgets import QMainWindow, QAction, QLabel, QWidget, QHBoxLayout, QTabWidget
-import robinhoodBot as r
-import rc_images
+import TradingBots.robinhoodBot as r
+# import Icons.rc_images as rc_images
 
 class MainWindow(QMainWindow):
     def __init__(self, stock_info, option_info):
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
 
         # geometry = QApplication.instance().desktop().availableGeometry(self)
         # self.setFixedSize(geometry.width() * 1.0, geometry.height() * 1.0)
-        stylesheet = "stylesheet.qss"
+        stylesheet = "Style/stylesheet.qss"
         with open(stylesheet, "r") as f:
             self.setStyleSheet(f.read())
         # self.setStyleSheet("background-color:#ffffff;")
